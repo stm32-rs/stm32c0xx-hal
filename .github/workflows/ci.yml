@@ -1,0 +1,25 @@
+on:
+  pull_request:
+
+name: Continuous integration
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+        feature:
+          - stm32c011
+          - stm32c031
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: thumbv6m-none-eabi
+          override: true
+      - name: Regular build
+        run: cargo check --features ${{ matrix.feature }}

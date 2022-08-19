@@ -1,0 +1,65 @@
+[package]
+authors = ["Vitaly Domnikov <oss@vitaly.codes>"]
+categories = ["embedded", "hardware-support", "no-std"]
+description = "Peripheral access API for STM32C0 series microcontrollers"
+documentation = "https://docs.rs/stm32c0xx-hal"
+edition = "2018"
+keywords = ["arm", "cortex-m", "stm32c0xx", "hal"]
+license = "MIT/Apache-2.0"
+name = "stm32c0xx-hal"
+readme = "README.md"
+repository = "https://github.com/stm32-rs/stm32c0xx-hal"
+version = "0.0.0"
+
+[package.metadata.docs.rs]
+features = ["stm32c031", "rt"]
+default-target = "thumbv6m-none-eabi"
+
+[dependencies]
+cortex-m = "0.7.1"
+nb = "1.0.0"
+fugit = "0.3.5"
+
+[dependencies.stm32c0]
+version = "0.0.0"
+# features = ["rt"]
+
+[dependencies.bare-metal]
+version = "1.0.0"
+
+[dependencies.embedded-hal]
+features = ["unproven"]
+version = "0.2.6"
+
+[dependencies.void]
+default-features = false
+version = "1.0.2"
+
+[dev-dependencies]
+cortex-m-rt = "0.7.1"
+cortex-m-rtic = "1.0.0"
+cortex-m-semihosting = "0.3.5"
+panic-halt = "0.2.0"
+panic-semihosting = "0.5.3"
+
+[features]
+default = ["i2c-blocking"]
+device-selected = []
+# rt = ["stm32c0/rt"]
+# stm32c011 = ["stm32c0/stm32c030", "stm32c0x0", "device-selected"]
+# stm32c031 = ["stm32c0/stm32c070", "stm32c0x0", "device-selected"]
+
+stm32c0x0 = []
+stm32c0x1 = []
+
+i2c-blocking = []
+i2c-nonblocking = []
+
+[profile.dev]
+incremental = false
+
+[profile.release]
+debug = false
+codegen-units = 1
+incremental = false
+lto = false

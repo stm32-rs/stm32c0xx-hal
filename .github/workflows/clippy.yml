@@ -1,0 +1,28 @@
+on:
+  push:
+    branches: [ staging, trying, main ]
+  pull_request:
+
+name: Clippy check
+jobs:
+  clippy_check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+        feature:
+          - stm32c011
+          - stm32c031
+    steps:
+      - uses: actions/checkout@v1
+      - run: rustup component add clippy
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          target: thumbv6m-none-eabi
+          override: true
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --target thumbv6m-none-eabi --features ${{ matrix.feature }}
