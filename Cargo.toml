@@ -21,8 +21,8 @@ nb = "1.0.0"
 fugit = "0.3.5"
 
 [dependencies.stm32c0]
-version = "0.0.0"
-# features = ["rt"]
+path = "../stm32-rs/stm32c0"
+features = ["rt"]
 
 [dependencies.bare-metal]
 version = "1.0.0"
@@ -45,12 +45,9 @@ panic-semihosting = "0.5.3"
 [features]
 default = ["i2c-blocking"]
 device-selected = []
-# rt = ["stm32c0/rt"]
-# stm32c011 = ["stm32c0/stm32c030", "stm32c0x0", "device-selected"]
-# stm32c031 = ["stm32c0/stm32c070", "stm32c0x0", "device-selected"]
-
-stm32c0x0 = []
-stm32c0x1 = []
+rt = ["stm32c0/rt"]
+stm32c011 = ["stm32c0/stm32c011", "device-selected"]
+stm32c031 = ["stm32c0/stm32c031", "device-selected"]
 
 i2c-blocking = []
 i2c-nonblocking = []
