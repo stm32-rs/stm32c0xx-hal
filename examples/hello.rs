@@ -6,8 +6,8 @@
 extern crate panic_halt;
 extern crate stm32c0xx_hal as hal;
 
-use cortex_m_semihosting::hprintln;
 use cortex_m_rt::entry;
+use cortex_m_semihosting::hprintln;
 
 #[entry]
 fn main() -> ! {
