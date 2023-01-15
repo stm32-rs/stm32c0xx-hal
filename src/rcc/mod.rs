@@ -97,24 +97,35 @@ impl Rcc {
     }
 
     pub(crate) fn enable_rtc(&self, src: RTCSrc) {
-        match src {
-            RTCSrc::LSI => self.enable_lsi(),
-            RTCSrc::HSE => self.enable_hse(false),
-            RTCSrc::LSE => self.enable_lse(false),
-        }
+        self.unlock_rtc();
         self.apbenr1
             .modify(|_, w| w.rtcapben().set_bit().pwren().set_bit());
         self.apbsmenr1.modify(|_, w| w.rtcapbsmen().set_bit());
-        self.unlock_rtc();
         // self.bdcr.modify(|_, w| w.bdrst().set_bit());
+        // let rtc_sel = match src {
+        //     RTCSrc::LSE | RTCSrc::LSE_BYPASS => 0b01,
+        //     RTCSrc::LSI => 0b10,
+        //     RTCSrc::HSE | RTCSrc::HSE_BYPASS => 0b11,
+        // };
+
         // self.bdcr.modify(|_, w| unsafe {
         //     w.rtcsel()
-        //         .bits(src as u8)
+        //         .bits(rtc_sel)
         //         .rtcen()
         //         .set_bit()
         //         .bdrst()
         //         .clear_bit()
         // });
+
+        self.unlock_rtc();
+        match src {
+            RTCSrc::LSE => self.enable_lse(false),
+            RTCSrc::LSE_BYPASS => self.enable_lse(true),
+            RTCSrc::LSI => self.enable_lsi(),
+            RTCSrc::HSE => self.enable_hse(false),
+            RTCSrc::HSE_BYPASS => self.enable_hse(true),
+        };
+        todo!();
     }
 }
 

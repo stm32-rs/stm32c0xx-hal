@@ -34,8 +34,20 @@ pub struct PwmPin<TIM, CH> {
     channel: PhantomData<CH>,
 }
 
+enum ClockSource {
+    ApbTim,
+    #[allow(dead_code)]
+    Pllq,
+}
+
 pub trait PwmExt: Sized {
     fn pwm(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self>;
+}
+
+pub trait PwmQExt: Sized {
+    // Configures PWM using PLLQ as a clock source. Panics if PLLQ was not
+    // enabled when RCC was configured.
+    fn pwm_q(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self>;
 }
 
 pub trait PwmPinMode {
@@ -60,16 +72,27 @@ macro_rules! pwm {
         $(
             impl PwmExt for $TIMX {
                 fn pwm(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self> {
-                    $timX(self, freq, rcc)
+                    $timX(self, freq, rcc, ClockSource::ApbTim)
                 }
             }
 
-            fn $timX(tim: $TIMX, freq: Hertz, rcc: &mut Rcc) -> Pwm<$TIMX> {
+            fn $timX(tim: $TIMX, freq: Hertz, rcc: &mut Rcc, clock_source: ClockSource) -> Pwm<$TIMX> {
                 $TIMX::enable(rcc);
                 $TIMX::reset(rcc);
 
+                let clk = match clock_source {
+                    ClockSource::ApbTim => {
+                        rcc.ccipr.modify(|_, w| w.tim1sel().clear_bit());
+                        rcc.clocks.apb_tim_clk
+                    }
+                    ClockSource::Pllq => {
+                        rcc.ccipr.modify(|_, w| w.tim1sel().set_bit());
+                        rcc.clocks.pll_clk.q.unwrap()
+                    }
+                };
+
                 let mut pwm = Pwm::<$TIMX> {
-                    clk: rcc.clocks.apb_tim_clk,
+                    clk,
                     tim,
                 };
                 pwm.set_freq(freq);
@@ -77,6 +100,9 @@ macro_rules! pwm {
             }
 
             impl Pwm<$TIMX> {
+                /// Set the PWM frequency. Actual frequency may differ from
+                /// requested due to precision of input clock. To check actual
+                /// frequency, call freq.
                 pub fn set_freq(&mut self, freq: Hertz) {
                     let ratio = self.clk / freq;
                     let psc = (ratio - 1) / 0xffff;
@@ -108,6 +134,26 @@ macro_rules! pwm {
                 /// Resets counter value
                 pub fn reset(&mut self) {
                     self.tim.cnt.reset();
+                }
+
+                /// Returns the currently configured frequency
+                pub fn freq(&self) -> Hertz {
+                    Hertz::from_raw(self.clk.raw()
+                        / (self.tim.psc.read().bits() + 1)
+                        / (self.tim.arr.read().bits() + 1))
+                }
+            }
+        )+
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! pwm_q {
+    ($($TIMX:ident: $timX:ident,)+) => {
+        $(
+            impl PwmQExt for $TIMX {
+                fn pwm_q(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self> {
+                    $timX(self, freq, rcc, ClockSource::Pllq)
                 }
             }
         )+
@@ -235,4 +281,8 @@ macro_rules! pwm_advanced_hal {
 //     TIM14: (tim14, arr),
 //     TIM16: (tim16, arr),
 //     TIM17: (tim17, arr),
+// }
+
+// pwm_q! {
+//     TIM1: tim1,
 // }

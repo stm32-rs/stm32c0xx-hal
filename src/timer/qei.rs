@@ -2,11 +2,6 @@
 use crate::hal::{self, Direction};
 use crate::rcc::*;
 
-#[cfg(feature = "stm32g0x1")]
-use crate::stm32::{TIM1, TIM2, TIM3};
-#[cfg(feature = "stm32g0x0")]
-use crate::stm32::{TIM1, TIM3};
-
 use crate::timer::pins::TimerPin;
 use crate::timer::*;
 

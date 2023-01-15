@@ -16,7 +16,7 @@ features = ["stm32c031", "rt"]
 default-target = "thumbv6m-none-eabi"
 
 [dependencies]
-cortex-m = "0.7.1"
+cortex-m = { version = "0.7.7", features=["critical-section-single-core"] }
 nb = "1.0.0"
 fugit = "0.3.5"
 
@@ -38,9 +38,9 @@ version = "1.0.2"
 [dev-dependencies]
 cortex-m-rt = "0.7.1"
 cortex-m-rtic = "1.0.0"
-cortex-m-semihosting = "0.3.5"
+cortex-m-semihosting = "0.3.7"
 panic-halt = "0.2.0"
-panic-semihosting = "0.5.3"
+panic-semihosting = "0.5.6"
 
 [features]
 default = ["i2c-blocking"]

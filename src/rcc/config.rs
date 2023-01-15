@@ -17,9 +17,13 @@ pub enum Prescaler {
 
 /// System clock mux source
 pub enum SysClockSrc {
+    LSI,
+    PLL,
     HSI(Prescaler),
     HSE(Hertz),
     HSE_BYPASS(Hertz),
+    LSE(Hertz),
+    LSE_BYPASS(Hertz),
 }
 
 /// Microcontroller clock output source
@@ -41,9 +45,11 @@ pub enum LSCOSrc {
 /// RTC clock input source
 #[derive(Clone, Copy)]
 pub enum RTCSrc {
-    LSE = 0b01,
-    LSI = 0b10,
-    HSE = 0b11,
+    LSE,
+    LSE_BYPASS,
+    LSI,
+    HSE,
+    HSE_BYPASS,
 }
 
 /// Clocks configutation
@@ -60,6 +66,10 @@ impl Config {
 
     pub fn hsi(psc: Prescaler) -> Self {
         Config::default().clock_src(SysClockSrc::HSI(psc))
+    }
+
+    pub fn lsi() -> Self {
+        Config::default().clock_src(SysClockSrc::LSI)
     }
 
     pub fn clock_src(mut self, mux: SysClockSrc) -> Self {

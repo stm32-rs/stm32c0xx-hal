@@ -2,6 +2,7 @@
 use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
+use core::marker::PhantomData;
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::SYST;
 use hal::timer::{CountDown, Periodic};
@@ -151,19 +152,6 @@ macro_rules! timers {
                     low | (_high << 16)
                 }
 
-                /// Releases the TIM peripheral
-                pub fn release(self) -> $TIM {
-                    self.tim
-                }
-            }
-
-            impl TimerExt<$TIM> for $TIM {
-                fn timer(self, rcc: &mut Rcc) -> Timer<$TIM> {
-                    Timer::$tim(self, rcc)
-                }
-            }
-
-            impl Timer<$TIM> {
                 pub fn start(&mut self, timeout: MicroSecond) {
                     // Pause the counter. Also set URS so that when we set UG below, it will
                     // generate an update event *without* triggering an interrupt.
@@ -179,7 +167,7 @@ macro_rules! timers {
                     let arr = cycles / (psc + 1);
 
                     self.tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
-                    self.tim.arr.write(|w| unsafe { w.bits(arr as u16) });
+                    self.tim.arr.write(|w| unsafe { w.bits(arr) });
 
                     // Generate an update event so that PSC and ARR values are copied into their
                     // shadow registers.
@@ -195,6 +183,17 @@ macro_rules! timers {
                         self.tim.sr.modify(|_, w| w.uif().clear_bit());
                         Ok(())
                     }
+                }
+
+                /// Releases the TIM peripheral
+                pub fn release(self) -> $TIM {
+                    self.tim
+                }
+            }
+
+            impl TimerExt<$TIM> for $TIM {
+                fn timer(self, rcc: &mut Rcc) -> Timer<$TIM> {
+                    Timer::$tim(self, rcc)
                 }
             }
 
@@ -218,10 +217,50 @@ macro_rules! timers {
     }
 }
 
-timers! {
-    // TIM1: (tim1, cnt),
-    // TIM3: (tim3, cnt_l, cnt_h),
-    // TIM14: (tim14, cnt),
-    TIM16: (tim16, cnt),
-    // TIM17: (tim17, cnt),
+pub enum ExternalClockMode {
+    Mode1,
+    Mode2,
 }
+
+pub trait ExternalClock {
+    fn mode(&self) -> ExternalClockMode;
+}
+
+macro_rules! timers_external_clocks {
+    ($($TIM:ident: ($tim:ident, $sms:ident $(,$ece:ident)*),)+) => {
+        $(
+            impl Timer<$TIM> {
+                pub fn use_external_clock<C: ExternalClock>(&mut self, clk: C, freq: Hertz) {
+                    self.clk = freq;
+                    match clk.mode() {
+                        ExternalClockMode::Mode1 => {
+                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b111) });
+                            $(
+                                self.tim.smcr.modify(|_, w| w.$ece().clear_bit());
+                            )*
+                        },
+                        ExternalClockMode::Mode2 => {
+                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b0) });
+                            $(
+                                self.tim.smcr.modify(|_, w| w.$ece().set_bit());
+                            )*
+                        },
+                    }
+                }
+            }
+        )+
+    }
+}
+
+// timers_external_clocks! {
+//     TIM1: (tim1, sms, ece),
+//     TIM3: (tim3, sms, ece),
+// }
+
+// timers! {
+//     TIM1: (tim1, cnt),
+//     TIM3: (tim3, cnt_l, cnt_h),
+//     TIM14: (tim14, cnt),
+//     TIM16: (tim16, cnt),
+//     TIM17: (tim17, cnt),
+// }

@@ -44,7 +44,7 @@ impl LSCOExt for LscoPin {
         };
         rcc.unlock_rtc();
         self.set_alt_mode(AltFunction::AF0);
-       // rcc.bdcr.modify(|_, w| w.lscosel().bit(src_select_bit));
+        // rcc.bdcr.modify(|_, w| w.lscosel().bit(src_select_bit));
         Lsco { pin: self }
     }
 }
