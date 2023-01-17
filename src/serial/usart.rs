@@ -298,7 +298,6 @@ macro_rules! uart_shared {
         }
 
         // impl Tx<$USARTX> {
-
         //     /// Starts listening for an interrupt event
         //     pub fn listen(&mut self) {
         //         let usart = unsafe { &(*$USARTX::ptr()) };
@@ -316,7 +315,6 @@ macro_rules! uart_shared {
         //         let usart = unsafe { &(*$USARTX::ptr()) };
         //         usart.isr.read().txe().bit_is_set()
         //     }
-
         // }
 
         // impl hal::serial::Write<u8> for Tx<$USARTX> {
@@ -353,7 +351,6 @@ macro_rules! uart_shared {
         //         self.tx.write(byte)
         //     }
         // }
-
 
         impl Serial<$USARTX> {
 
@@ -533,35 +530,45 @@ macro_rules! uart {
 
 uart_shared!(USART1, USART1_RX, USART1_TX,
     tx: [
+        (PA0, AltFunction::AF4),
         (PA9, AltFunction::AF1),
         (PB6, AltFunction::AF0),
-        (PC4, AltFunction::AF1),
+        (PC14, AltFunction::AF0),
     ],
     rx: [
+        (PA1, AltFunction::AF4),
+        (PA8, AltFunction::AF14),
         (PA10, AltFunction::AF1),
+        (PB2, AltFunction::AF0),
         (PB7, AltFunction::AF0),
-        (PC5, AltFunction::AF1),
     ],
     de: [
         (PA12, AltFunction::AF1),
+        (PA14, AltFunction::AF12),
+        (PA15, AltFunction::AF4),
         (PB3, AltFunction::AF4),
+        (PB6, AltFunction::AF4),
     ]
 );
 
 uart_shared!(USART2, USART2_RX, USART2_TX,
     tx: [
         (PA2, AltFunction::AF1),
+        (PA4, AltFunction::AF1),
+        (PA8, AltFunction::AF1),
         (PA14, AltFunction::AF1),
-        (PD5, AltFunction::AF0),
     ],
     rx: [
         (PA3, AltFunction::AF1),
-        (PA15, AltFunction::AF1),
-        (PD6, AltFunction::AF0),
+        (PA5, AltFunction::AF1),
+        (PA13, AltFunction::AF4),
+        (PA14, AltFunction::AF9),
+        (PA15, AltFunction::AF1), 
     ],
     de: [
         (PA1, AltFunction::AF1),
-        (PD4, AltFunction::AF0),
+        (PB9, AltFunction::AF1),
+        (PC14, AltFunction::AF9),
     ]
 );
 

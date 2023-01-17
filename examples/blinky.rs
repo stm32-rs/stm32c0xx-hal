@@ -15,7 +15,7 @@ fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
     let port_a = dp.GPIOA.split(&mut rcc);
-    let mut led = port_a.pa0.into_push_pull_output();
+    let mut led = port_a.pa5.into_push_pull_output();
     loop {
         led.toggle().unwrap();
         for _ in 0..1_000_000 {

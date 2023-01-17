@@ -15,9 +15,10 @@ fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
     let port_a = dp.GPIOA.split(&mut rcc);
+    let port_c = dp.GPIOC.split(&mut rcc);
 
-    let button = port_a.pa1.into_pull_up_input();
-    let mut led = port_a.pa0.into_push_pull_output();
+    let button = port_c.pc13.into_pull_up_input();
+    let mut led = port_a.pa5.into_push_pull_output();
 
     loop {
         if button.is_high().unwrap() {

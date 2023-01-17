@@ -432,8 +432,11 @@ macro_rules! int_adc {
 }
 
 int_adc! {
-    VTemp: (12, tsen),
-    VRef: (13, vrefen),
+    //TODO; check channel ids
+    VTemp: (9, tsen),
+    VRef: (10, vrefen),
+    // Vdda: (15, --),
+    // Vssa: (16, --),
 }
 
 macro_rules! adc_pin {
@@ -457,13 +460,18 @@ adc_pin! {
     Channel5: (PA5<Analog>, 5u8),
     Channel6: (PA6<Analog>, 6u8),
     Channel7: (PA7<Analog>, 7u8),
-    Channel8: (PB0<Analog>, 8u8),
-    Channel9: (PB1<Analog>, 9u8),
-    Channel10: (PB2<Analog>, 10u8),
-    Channel11: (PB10<Analog>, 11u8),
-    Channel11: (PB7<Analog>, 11u8),
-    Channel15: (PB11<Analog>, 15u8),
-    Channel16: (PB12<Analog>, 16u8),
-    Channel17: (PC4<Analog>, 17u8),
-    Channel18: (PC5<Analog>, 18u8),
+    Channel8: (PA8<Analog>, 8u8),
+    // Channel9: (<Analog>, 9u8),
+    // Channel10: (<Analog>, 10u8),
+    Channel11: (PA11<Analog>, 11u8),
+    Channel12: (PA12<Analog>, 12u8),
+    Channel13: (PA13<Analog>, 13u8),
+    Channel14: (PA14<Analog>, 14u8),
+    //TODO check sequecer
+    Channel17: (PB0<Analog>, 17u8),
+    Channel18: (PB1<Analog>, 18u8),
+    Channel19: (PB2<Analog>, 19u8),
+    Channel20: (PB10<Analog>, 20u8),
+    Channel21: (PB11<Analog>, 21u8),
+    Channel22: (PB12<Analog>, 22u8),
 }

@@ -277,6 +277,7 @@ macro_rules! spi {
     }
 }
 
+
 spi!(
     SPI,
     spi1,
@@ -284,19 +285,19 @@ spi!(
         (PA1<DefaultMode>, AltFunction::AF0),
         (PA5<DefaultMode>, AltFunction::AF0),
         (PB3<DefaultMode>, AltFunction::AF0),
-        (PD8<DefaultMode>, AltFunction::AF1),
+        (PB6<DefaultMode>, AltFunction::AF10),
     ],
     miso: [
         (PA6<DefaultMode>, AltFunction::AF0),
         (PA11<DefaultMode>, AltFunction::AF0),
         (PB4<DefaultMode>, AltFunction::AF0),
-        (PD5<DefaultMode>, AltFunction::AF1),
+        (PB6<DefaultMode>, AltFunction::AF9),
     ],
     mosi: [
         (PA2<DefaultMode>, AltFunction::AF0),
         (PA7<DefaultMode>, AltFunction::AF0),
         (PA12<DefaultMode>, AltFunction::AF0),
         (PB5<DefaultMode>, AltFunction::AF0),
-        (PD6<DefaultMode>, AltFunction::AF1),
+        (PB6<DefaultMode>, AltFunction::AF8),
     ],
 );
