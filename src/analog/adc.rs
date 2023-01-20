@@ -132,9 +132,12 @@ impl Adc {
     /// Sets ADC source
     pub fn set_clock_source(&mut self, clock_source: ClockSource) {
         match clock_source {
-            ClockSource::Pclk(div) => self.rb.cfgr2.modify(|_, w| w.ckmode().bits(div as u8)),
+            ClockSource::Pclk(div) => self
+                .rb
+                .cfgr2
+                .modify(|_, w| unsafe { w.ckmode().bits(div as u8) }),
             ClockSource::Async(div) => {
-                self.rb.cfgr2.modify(|_, w| w.ckmode().bits(0));
+                self.rb.cfgr2.modify(|_, w| unsafe { w.ckmode().bits(0) });
                 self.rb
                     .ccr
                     .modify(|_, w| unsafe { w.presc().bits(div as u8) });
@@ -201,7 +204,9 @@ impl Adc {
 
     /// Oversampling of adc
     pub fn set_oversampling_ratio(&mut self, ratio: OversamplingRatio) {
-        self.rb.cfgr2.modify(|_, w| w.ovsr().bits(ratio as u8));
+        self.rb
+            .cfgr2
+            .modify(|_, w| unsafe { w.ovsr().bits(ratio as u8) });
     }
 
     pub fn oversampling_enable(&mut self, enable: bool) {
@@ -301,9 +306,9 @@ where
     fn prepare_injected(&mut self, _pin: &mut PIN, triger_source: InjTrigSource) {
         self.rb
             .cfgr1
-            .modify(|_, w| w.exten().bits(1).extsel().bits(triger_source as u8));
+            .modify(|_, w| unsafe { w.exten().bits(1).extsel().bits(triger_source as u8) });
 
-        self.rb.cfgr1.modify(|_, w| {
+        self.rb.cfgr1.modify(|_, w| unsafe {
             w.res() // set ADC resolution bits (ADEN must be =0)
                 .bits(self.precision as u8)
                 .align() // set alignment bit is  (ADSTART must be 0)
@@ -314,7 +319,7 @@ where
 
         self.rb
             .smpr // set sampling time set 1 (ADSTART must be 0)
-            .modify(|_, w| w.smp1().bits(self.sample_time as u8));
+            .modify(|_, w| unsafe { w.smp1().bits(self.sample_time as u8) });
 
         todo!();
         // self.rb
@@ -359,7 +364,7 @@ where
 
     fn read(&mut self, _pin: &mut PIN) -> nb::Result<WORD, Self::Error> {
         self.power_up();
-        self.rb.cfgr1.modify(|_, w| {
+        self.rb.cfgr1.modify(|_, w| unsafe {
             w.res()
                 .bits(self.precision as u8)
                 .align()
@@ -368,7 +373,7 @@ where
 
         self.rb
             .smpr
-            .modify(|_, w| w.smp1().bits(self.sample_time as u8));
+            .modify(|_, w| unsafe { w.smp1().bits(self.sample_time as u8) });
 
         self.rb
             .chselr0()

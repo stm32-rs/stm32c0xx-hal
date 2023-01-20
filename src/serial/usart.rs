@@ -399,7 +399,7 @@ macro_rules! uart {
                 usart.cr2.reset();
                 usart.cr3.reset();
 
-                usart.cr2.write(|w| {
+                usart.cr2.write(|w| unsafe {
                     w.stop()
                         .bits(config.stopbits.bits())
                         .swap()

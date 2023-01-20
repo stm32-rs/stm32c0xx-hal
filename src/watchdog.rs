@@ -32,7 +32,7 @@ impl IndependedWatchdog {
         // Enable access to RLR/PR
         self.iwdg.kr.write(|w| unsafe { w.key().bits(0x5555) });
 
-        self.iwdg.pr.write(|w| w.pr().bits(psc));
+        self.iwdg.pr.write(|w| unsafe { w.pr().bits(psc) });
         self.iwdg
             .rlr
             .write(|w| unsafe { w.rl().bits(reload as u16) });

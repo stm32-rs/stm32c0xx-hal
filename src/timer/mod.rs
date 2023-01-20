@@ -238,13 +238,13 @@ macro_rules! timers_external_clocks {
                     self.clk = freq;
                     match clk.mode() {
                         ExternalClockMode::Mode1 => {
-                            self.tim.smcr.modify(|_, w| w.$sms().bits(0b111));
+                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b111) });
                             $(
                                 self.tim.smcr.modify(|_, w| w.$ece().clear_bit());
                             )*
                         },
                         ExternalClockMode::Mode2 => {
-                            self.tim.smcr.modify(|_, w| w.$sms().bits(0b0));
+                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b0) });
                             $(
                                 self.tim.smcr.modify(|_, w| w.$ece().set_bit());
                             )*

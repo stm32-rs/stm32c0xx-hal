@@ -91,7 +91,7 @@ impl Rcc {
                     Prescaler::Div128 => (HSI_FREQ / 128, 0b111),
                     _ => (HSI_FREQ, 0b000),
                 };
-                self.cr.write(|w| w.hsidiv().bits(div_bits));
+                self.cr.write(|w| unsafe { w.hsidiv().bits(div_bits) });
                 (freq.Hz(), 0b000)
             }
         };
@@ -177,7 +177,7 @@ impl Rcc {
             RTCSrc::HSE | RTCSrc::HSE_BYPASS => 0b11,
         };
 
-        self.csr1.modify(|_, w| {
+        self.csr1.modify(|_, w| unsafe {
             w.rtcsel()
                 .bits(rtc_sel)
                 .rtcen()

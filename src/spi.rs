@@ -162,14 +162,14 @@ macro_rules! spi {
                     _ => 0b111,
                 };
 
-                spi.cr2.write(|w| {
+                spi.cr2.write(|w| unsafe {
                     w.frxth().set_bit().ds().bits(0b111).ssoe().clear_bit()
                 });
 
                 // Enable pins
                 pins.setup();
 
-                spi.cr1.write(|w| {
+                spi.cr1.write(|w| unsafe {
                     w.cpha()
                         .bit(mode.phase == Phase::CaptureOnSecondTransition)
                         .cpol()
@@ -198,7 +198,7 @@ macro_rules! spi {
             }
 
             pub fn data_size(&mut self, nr_bits: u8) {
-                self.spi.cr2.modify(|_, w| {
+                self.spi.cr2.modify(|_, w| unsafe {
                     w.ds().bits(nr_bits-1)
                 });
             }
