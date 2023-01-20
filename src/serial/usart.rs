@@ -241,51 +241,51 @@ macro_rules! uart_shared {
             }
         )+
 
-        // impl Rx<$USARTX> {
-        //     pub fn listen(&mut self) {
-        //         let usart = unsafe { &(*$USARTX::ptr()) };
-        //         usart.cr1.modify(|_, w| w.rxneie().set_bit());
-        //     }
+        impl Rx<$USARTX> {
+            pub fn listen(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.cr1_disabled().modify(|_, w| w.rxneie().set_bit());
+            }
 
-        //     /// Stop listening for an interrupt event
-        //     pub fn unlisten(&mut self) {
-        //         let usart = unsafe { &(*$USARTX::ptr()) };
-        //         usart.cr1.modify(|_, w| w.rxneie().clear_bit());
-        //     }
+            /// Stop listening for an interrupt event
+            pub fn unlisten(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.cr1_disabled().modify(|_, w| w.rxneie().clear_bit());
+            }
 
-        //     /// Return true if the rx register is not empty (and can be read)
-        //     pub fn is_rxne(&self) -> bool {
-        //         let usart = unsafe { &(*$USARTX::ptr()) };
-        //         usart.isr.read().rxne().bit_is_set()
-        //     }
-        // }
+            /// Return true if the rx register is not empty (and can be read)
+            pub fn is_rxne(&self) -> bool {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.isr_disabled().read().rxne().bit_is_set()
+            }
+        }
 
         impl hal::serial::Read<u8> for Rx<$USARTX> {
             type Error = Error;
 
             fn read(&mut self) -> nb::Result<u8, Error> {
-                todo!();
-                // let usart = unsafe { &(*$USARTX::ptr()) };
-                // let isr = usart.isr.read();
-                // Err(
-                //     if isr.pe().bit_is_set() {
-                //         usart.icr.write(|w| w.pecf().set_bit());
-                //         nb::Error::Other(Error::Parity)
-                //     } else if isr.fe().bit_is_set() {
-                //         usart.icr.write(|w| w.fecf().set_bit());
-                //         nb::Error::Other(Error::Framing)
-                //     } else if isr.nf().bit_is_set() {
-                //         usart.icr.write(|w| w.ncf().set_bit());
-                //         nb::Error::Other(Error::Noise)
-                //     } else if isr.ore().bit_is_set() {
-                //         usart.icr.write(|w| w.orecf().set_bit());
-                //         nb::Error::Other(Error::Overrun)
-                //     } else if isr.rxne().bit_is_set() {
-                //         return Ok(usart.rdr.read().bits() as u8)
-                //     } else {
-                //         nb::Error::WouldBlock
-                //     }
-                // )
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                let isr = usart.isr_enabled().read();
+
+                Err(
+                    if isr.pe().bit_is_set() {
+                        usart.icr.write(|w| w.pecf().set_bit());
+                        nb::Error::Other(Error::Parity)
+                    } else if isr.fe().bit_is_set() {
+                        usart.icr.write(|w| w.fecf().set_bit());
+                        nb::Error::Other(Error::Framing)
+                    } else if isr.ne().bit_is_set() {
+                        usart.icr.write(|w| w.necf().set_bit());
+                        nb::Error::Other(Error::Noise)
+                    } else if isr.ore().bit_is_set() {
+                        usart.icr.write(|w| w.orecf().set_bit());
+                        nb::Error::Other(Error::Overrun)
+                    } else if isr.rxfne().bit_is_set() {
+                        return Ok(usart.rdr.read().bits() as u8)
+                    } else {
+                        nb::Error::WouldBlock
+                    }
+                )
             }
         }
 
@@ -297,60 +297,60 @@ macro_rules! uart_shared {
             }
         }
 
-        // impl Tx<$USARTX> {
-        //     /// Starts listening for an interrupt event
-        //     pub fn listen(&mut self) {
-        //         let usart = unsafe { &(*$USARTX::ptr()) };
-        //         usart.cr1.modify(|_, w| w.txeie().set_bit());
-        //     }
+        impl Tx<$USARTX> {
+            /// Starts listening for an interrupt event
+            pub fn listen(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.cr1_disabled().modify(|_, w| w.txeie().set_bit());
+            }
 
-        //     /// Stop listening for an interrupt event
-        //     pub fn unlisten(&mut self) {
-        //         let usart = unsafe { &(*$USARTX::ptr()) };
-        //         usart.cr1.modify(|_, w| w.txeie().clear_bit());
-        //     }
+            /// Stop listening for an interrupt event
+            pub fn unlisten(&mut self) {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.cr1_disabled().modify(|_, w| w.txeie().clear_bit());
+            }
 
-        //     /// Return true if the tx register is empty (and can accept data)
-        //     pub fn is_txe(&self) -> bool {
-        //         let usart = unsafe { &(*$USARTX::ptr()) };
-        //         usart.isr.read().txe().bit_is_set()
-        //     }
-        // }
+            /// Return true if the tx register is empty (and can accept data)
+            pub fn is_txe(&self) -> bool {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.isr_disabled().read().txe().bit_is_set()
+            }
+        }
 
-        // impl hal::serial::Write<u8> for Tx<$USARTX> {
-        //     type Error = Error;
+        impl hal::serial::Write<u8> for Tx<$USARTX> {
+            type Error = Error;
 
-        //     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        //         let usart = unsafe { &(*$USARTX::ptr()) };
-        //         if usart.isr.read().tc().bit_is_set() {
-        //             Ok(())
-        //         } else {
-        //             Err(nb::Error::WouldBlock)
-        //         }
-        //     }
+            fn flush(&mut self) -> nb::Result<(), Self::Error> {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                if usart.isr_disabled().read().tc().bit_is_set() {
+                    Ok(())
+                } else {
+                    Err(nb::Error::WouldBlock)
+                }
+            }
 
-        //     fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
-        //         let usart = unsafe { &(*$USARTX::ptr()) };
-        //         if usart.isr.read().txe().bit_is_set() {
-        //             usart.tdr.write(|w| unsafe { w.bits(byte as u32) });
-        //             Ok(())
-        //         } else {
-        //             Err(nb::Error::WouldBlock)
-        //         }
-        //     }
-        // }
+            fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                if usart.isr_disabled().read().txe().bit_is_set() {
+                    usart.tdr.write(|w| unsafe { w.bits(byte as u32) });
+                    Ok(())
+                } else {
+                    Err(nb::Error::WouldBlock)
+                }
+            }
+        }
 
-        // impl hal::serial::Write<u8> for Serial<$USARTX> {
-        //     type Error = Error;
+        impl hal::serial::Write<u8> for Serial<$USARTX> {
+            type Error = Error;
 
-        //     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        //         self.tx.flush()
-        //     }
+            fn flush(&mut self) -> nb::Result<(), Self::Error> {
+                self.tx.flush()
+            }
 
-        //     fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
-        //         self.tx.write(byte)
-        //     }
-        // }
+            fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
+                self.tx.write(byte)
+            }
+        }
 
         impl Serial<$USARTX> {
 
@@ -407,7 +407,7 @@ macro_rules! uart {
                 });
 
                 if let Some(timeout) = config.receiver_timeout {
-                    // usart.cr1.write(|w| w.rtoie().set_bit());
+                    usart.cr1_enabled().write(|w| w.rtoie().set_bit());
                     usart.cr2.modify(|_, w| w.rtoen().set_bit());
                     usart.rtor.write(|w| unsafe { w.rto().bits(timeout) });
                 }
@@ -423,24 +423,24 @@ macro_rules! uart {
                         .bit(config.rx_fifo_interrupt)
                 });
 
-                // usart.cr1.modify(|_, w| {
-                //     w.ue()
-                //         .set_bit()
-                //         .te()
-                //         .set_bit()
-                //         .re()
-                //         .set_bit()
-                //         .m0()
-                //         .bit(config.wordlength == WordLength::DataBits7)
-                //         .m1()
-                //         .bit(config.wordlength == WordLength::DataBits9)
-                //         .pce()
-                //         .bit(config.parity != Parity::ParityNone)
-                //         .ps()
-                //         .bit(config.parity == Parity::ParityOdd)
-                //         .fifoen()
-                //         .bit(config.fifo_enable)
-                // });
+                usart.cr1_enabled().modify(|_, w| {
+                    w.ue()
+                        .set_bit()
+                        .te()
+                        .set_bit()
+                        .re()
+                        .set_bit()
+                        .m0()
+                        .bit(config.wordlength == WordLength::DataBits7)
+                        .m1()
+                        .bit(config.wordlength == WordLength::DataBits9)
+                        .pce()
+                        .bit(config.parity != Parity::ParityNone)
+                        .ps()
+                        .bit(config.parity == Parity::ParityOdd)
+                        .fifoen()
+                        .bit(config.fifo_enable)
+                });
 
                 usart.cr3.write(|w| w.dem().bit(PINS::DRIVER_ENABLE));
 
@@ -461,9 +461,15 @@ macro_rules! uart {
             /// Starts listening for an interrupt event
             pub fn listen(&mut self, event: Event) {
                 match event {
-                    // Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().set_bit()),
-                    // Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().set_bit()),
-                    // Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().set_bit()),
+                    Event::Rxne => self
+                        .usart
+                        .cr1_disabled()
+                        .modify(|_, w| w.rxneie().set_bit()),
+                    Event::Txe => self.usart.cr1_disabled().modify(|_, w| w.txeie().set_bit()),
+                    Event::Idle => self
+                        .usart
+                        .cr1_disabled()
+                        .modify(|_, w| w.idleie().set_bit()),
                     _ => {}
                 }
             }
@@ -471,17 +477,25 @@ macro_rules! uart {
             /// Stop listening for an interrupt event
             pub fn unlisten(&mut self, event: Event) {
                 match event {
-                    // Event::Rxne => self.usart.cr1.modify(|_, w| w.rxneie().clear_bit()),
-                    // Event::Txe => self.usart.cr1.modify(|_, w| w.txeie().clear_bit()),
-                    // Event::Idle => self.usart.cr1.modify(|_, w| w.idleie().clear_bit()),
+                    Event::Rxne => self
+                        .usart
+                        .cr1_disabled()
+                        .modify(|_, w| w.rxneie().clear_bit()),
+                    Event::Txe => self
+                        .usart
+                        .cr1_disabled()
+                        .modify(|_, w| w.txeie().clear_bit()),
+                    Event::Idle => self
+                        .usart
+                        .cr1_disabled()
+                        .modify(|_, w| w.idleie().clear_bit()),
                     _ => {}
                 }
             }
 
             /// Check if interrupt event is pending
-            pub fn is_pending(&mut self, _event: Event) -> bool {
-                // (self.usart.isr.read().bits() & event.val()) != 0
-                todo!();
+            pub fn is_pending(&mut self, event: Event) -> bool {
+                (self.usart.isr_enabled().read().bits() & event.val()) != 0
             }
 
             /// Clear pending interrupt
@@ -497,9 +511,8 @@ macro_rules! uart {
         impl Tx<$USARTX> {
             /// Returns true if the tx fifo threshold has been reached.
             pub fn fifo_threshold_reached(&self) -> bool {
-                // let usart = unsafe { &(*$USARTX::ptr()) };
-                // usart.isr.read().txft().bit_is_set()
-                todo!();
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.isr_enabled().read().txft().bit_is_set()
             }
         }
 
@@ -507,9 +520,8 @@ macro_rules! uart {
             /// Check if receiver timeout has lapsed
             /// Returns the current state of the ISR RTOF bit
             pub fn timeout_lapsed(&self) -> bool {
-                // let usart = unsafe { &(*$USARTX::ptr()) };
-                // usart.isr.read().rtof().bit_is_set()
-                todo!();
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.isr_enabled().read().rtof().bit_is_set()
             }
 
             /// Clear pending receiver timeout interrupt
@@ -520,9 +532,8 @@ macro_rules! uart {
 
             /// Returns true if the rx fifo threshold has been reached.
             pub fn fifo_threshold_reached(&self) -> bool {
-                // let usart = unsafe { &(*$USARTX::ptr()) };
-                // usart.isr.read().rxft().bit_is_set()
-                todo!();
+                let usart = unsafe { &(*$USARTX::ptr()) };
+                usart.isr_enabled().read().rxft().bit_is_set()
             }
         }
     };
@@ -563,7 +574,7 @@ uart_shared!(USART2, USART2_RX, USART2_TX,
         (PA5, AltFunction::AF1),
         (PA13, AltFunction::AF4),
         (PA14, AltFunction::AF9),
-        (PA15, AltFunction::AF1), 
+        (PA15, AltFunction::AF1),
     ],
     de: [
         (PA1, AltFunction::AF1),

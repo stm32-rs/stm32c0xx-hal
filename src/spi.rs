@@ -277,7 +277,6 @@ macro_rules! spi {
     }
 }
 
-
 spi!(
     SPI,
     spi1,

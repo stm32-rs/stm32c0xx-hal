@@ -112,6 +112,10 @@ macro_rules! timers {
                     }
                 }
 
+                pub fn enabled(&self) -> bool {
+                    self.tim.cr1.read().cen().bit()
+                }
+
                 /// Pauses timer
                 pub fn pause(&mut self) {
                     self.tim.cr1.modify(|_, w| w.cen().clear_bit());
@@ -167,7 +171,7 @@ macro_rules! timers {
                     let arr = cycles / (psc + 1);
 
                     self.tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
-                    self.tim.arr.write(|w| unsafe { w.bits(arr) });
+                    self.tim.arr.write(|w| unsafe { w.bits(arr as _) });
 
                     // Generate an update event so that PSC and ARR values are copied into their
                     // shadow registers.
@@ -234,13 +238,13 @@ macro_rules! timers_external_clocks {
                     self.clk = freq;
                     match clk.mode() {
                         ExternalClockMode::Mode1 => {
-                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b111) });
+                            self.tim.smcr.modify(|_, w| w.$sms().bits(0b111));
                             $(
                                 self.tim.smcr.modify(|_, w| w.$ece().clear_bit());
                             )*
                         },
                         ExternalClockMode::Mode2 => {
-                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b0) });
+                            self.tim.smcr.modify(|_, w| w.$sms().bits(0b0));
                             $(
                                 self.tim.smcr.modify(|_, w| w.$ece().set_bit());
                             )*
@@ -252,15 +256,15 @@ macro_rules! timers_external_clocks {
     }
 }
 
-// timers_external_clocks! {
-//     TIM1: (tim1, sms, ece),
-//     TIM3: (tim3, sms, ece),
-// }
+timers_external_clocks! {
+    TIM1: (tim1, sms1, ece),
+    TIM3: (tim3, sms1, ece),
+}
 
-// timers! {
-//     TIM1: (tim1, cnt),
-//     TIM3: (tim3, cnt_l, cnt_h),
-//     TIM14: (tim14, cnt),
-//     TIM16: (tim16, cnt),
-//     TIM17: (tim17, cnt),
-// }
+timers! {
+    TIM1: (tim1, cnt),
+    TIM3: (tim3, cnt),
+    TIM14: (tim14, cnt),
+    TIM16: (tim16, cnt),
+    TIM17: (tim17, cnt),
+}

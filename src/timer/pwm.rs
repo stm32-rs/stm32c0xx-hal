@@ -34,20 +34,8 @@ pub struct PwmPin<TIM, CH> {
     channel: PhantomData<CH>,
 }
 
-enum ClockSource {
-    ApbTim,
-    #[allow(dead_code)]
-    Pllq,
-}
-
 pub trait PwmExt: Sized {
     fn pwm(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self>;
-}
-
-pub trait PwmQExt: Sized {
-    // Configures PWM using PLLQ as a clock source. Panics if PLLQ was not
-    // enabled when RCC was configured.
-    fn pwm_q(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self>;
 }
 
 pub trait PwmPinMode {
@@ -72,25 +60,15 @@ macro_rules! pwm {
         $(
             impl PwmExt for $TIMX {
                 fn pwm(self, freq: Hertz, rcc: &mut Rcc) -> Pwm<Self> {
-                    $timX(self, freq, rcc, ClockSource::ApbTim)
+                    $timX(self, freq, rcc)
                 }
             }
 
-            fn $timX(tim: $TIMX, freq: Hertz, rcc: &mut Rcc, clock_source: ClockSource) -> Pwm<$TIMX> {
+            fn $timX(tim: $TIMX, freq: Hertz, rcc: &mut Rcc) -> Pwm<$TIMX> {
                 $TIMX::enable(rcc);
                 $TIMX::reset(rcc);
 
-                let clk = match clock_source {
-                    ClockSource::ApbTim => {
-                        rcc.ccipr.modify(|_, w| w.tim1sel().clear_bit());
-                        rcc.clocks.apb_tim_clk
-                    }
-                    ClockSource::Pllq => {
-                        rcc.ccipr.modify(|_, w| w.tim1sel().set_bit());
-                        rcc.clocks.pll_clk.q.unwrap()
-                    }
-                };
-
+                let clk = rcc.clocks.apb_tim_clk;
                 let mut pwm = Pwm::<$TIMX> {
                     clk,
                     tim,
@@ -139,8 +117,8 @@ macro_rules! pwm {
                 /// Returns the currently configured frequency
                 pub fn freq(&self) -> Hertz {
                     Hertz::from_raw(self.clk.raw()
-                        / (self.tim.psc.read().bits() + 1)
-                        / (self.tim.arr.read().bits() + 1))
+                        / (self.tim.psc.read().bits() as u32 + 1)
+                        / (self.tim.arr.read().bits() as u32 + 1))
                 }
             }
         )+
@@ -258,31 +236,27 @@ macro_rules! pwm_advanced_hal {
     };
 }
 
-// pwm_advanced_hal! {
-//     TIM1:  (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, ccr1, moe),
-//     TIM1:  (Channel2, cc2e: cc2ne, ccmr1_output, oc2pe, oc2m, ccr2, moe),
-//     TIM1:  (Channel3, cc3e: cc3ne, ccmr2_output, oc3pe, oc3m, ccr3, moe),
-//     TIM1:  (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, moe),
-//     TIM14: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1),
-//     TIM16: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, ccr1, moe),
-//     TIM17: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, ccr1, moe),
-// }
+pwm_advanced_hal! {
+    TIM1:  (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m1, ccr1, moe),
+    TIM1:  (Channel2, cc2e: cc2ne, ccmr1_output, oc2pe, oc2m1, ccr2, moe),
+    TIM1:  (Channel3, cc3e: cc3ne, ccmr2_output, oc3pe, oc3m1, ccr3, moe),
+    TIM1:  (Channel4, cc4e, ccmr2_output, oc4pe, oc4m1, ccr4, moe),
+    TIM14: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m1, ccr1),
+    TIM16: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m1, ccr1, moe),
+    TIM17: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m1, ccr1, moe),
+}
 
-// pwm_hal! {
-//     TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
-//     TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
-//     TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
-//     TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
-// }
+pwm_hal! {
+    TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m1, ccr1, ccr1_l, ccr1_h),
+    TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m1, ccr2, ccr2_l, ccr2_h),
+    TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m1, ccr3, ccr3_l, ccr3_h),
+    TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m1, ccr4, ccr4_l, ccr4_h),
+}
 
-// pwm! {
-//     TIM1: (tim1, arr),
-//     TIM3: (tim3, arr_l, arr_h),
-//     TIM14: (tim14, arr),
-//     TIM16: (tim16, arr),
-//     TIM17: (tim17, arr),
-// }
-
-// pwm_q! {
-//     TIM1: tim1,
-// }
+pwm! {
+    TIM1: (tim1, arr),
+    TIM3: (tim3, arr),
+    TIM14: (tim14, arr),
+    TIM16: (tim16, arr),
+    TIM17: (tim17, arr),
+}

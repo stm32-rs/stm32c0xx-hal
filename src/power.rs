@@ -109,6 +109,7 @@ impl Power {
     }
 
     pub fn set_mode(&mut self, _mode: PowerMode) {
+        todo!();
         // match mode {
         //     PowerMode::Run => {
         //         self.rb.cr1.modify(|_, w| w.lpr().clear_bit());

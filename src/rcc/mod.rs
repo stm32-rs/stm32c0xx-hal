@@ -32,9 +32,9 @@ impl Default for Clocks {
         Clocks {
             sys_clk: 12.MHz(),
             ahb_clk: 12.MHz(),
-            core_clk: 12.MHz(),
             apb_clk: 12.MHz(),
             apb_tim_clk: 12.MHz(),
+            core_clk: 1_500.kHz(),
         }
     }
 }
@@ -57,10 +57,85 @@ impl core::ops::Deref for Rcc {
 
 impl Rcc {
     /// Apply clock configuration
-    pub fn freeze(self, _cfg: Config) -> Self {
+    pub fn freeze(self, cfg: Config) -> Self {
+        let (sys_clk, sw_bits) = match cfg.sys_mux {
+            SysClockSrc::HSE(freq) => {
+                self.enable_hse(false);
+                (freq, 0b001)
+            }
+            SysClockSrc::HSE_BYPASS(freq) => {
+                self.enable_hse(true);
+                (freq, 0b001)
+            }
+            SysClockSrc::LSE(freq) => {
+                self.enable_lse(false);
+                (freq, 0b100)
+            }
+            SysClockSrc::LSE_BYPASS(freq) => {
+                self.enable_lse(true);
+                (freq, 0b100)
+            }
+            SysClockSrc::LSI => {
+                self.enable_lsi();
+                (32_768.Hz(), 0b011)
+            }
+            SysClockSrc::HSI(prs) => {
+                self.enable_hsi();
+                let (freq, div_bits) = match prs {
+                    Prescaler::Div2 => (HSI_FREQ / 2, 0b001),
+                    Prescaler::Div4 => (HSI_FREQ / 4, 0b010),
+                    Prescaler::Div8 => (HSI_FREQ / 8, 0b011),
+                    Prescaler::Div16 => (HSI_FREQ / 16, 0b100),
+                    Prescaler::Div32 => (HSI_FREQ / 32, 0b101),
+                    Prescaler::Div64 => (HSI_FREQ / 64, 0b110),
+                    Prescaler::Div128 => (HSI_FREQ / 128, 0b111),
+                    _ => (HSI_FREQ, 0b000),
+                };
+                self.cr.write(|w| w.hsidiv().bits(div_bits));
+                (freq.Hz(), 0b000)
+            }
+        };
+
+        let sys_freq = sys_clk.raw();
+        let (ahb_freq, ahb_psc_bits) = match cfg.ahb_psc {
+            Prescaler::Div2 => (sys_freq / 2, 0b1000),
+            Prescaler::Div4 => (sys_freq / 4, 0b1001),
+            Prescaler::Div8 => (sys_freq / 8, 0b1010),
+            Prescaler::Div16 => (sys_freq / 16, 0b1011),
+            Prescaler::Div64 => (sys_freq / 64, 0b1100),
+            Prescaler::Div128 => (sys_freq / 128, 0b1101),
+            Prescaler::Div256 => (sys_freq / 256, 0b1110),
+            Prescaler::Div512 => (sys_freq / 512, 0b1111),
+            _ => (sys_clk.raw(), 0b0000),
+        };
+        let (apb_freq, apb_tim_freq, apb_psc_bits) = match cfg.apb_psc {
+            Prescaler::Div2 => (ahb_freq / 2, ahb_freq, 0b100),
+            Prescaler::Div4 => (ahb_freq / 4, ahb_freq / 2, 0b101),
+            Prescaler::Div8 => (ahb_freq / 8, ahb_freq / 4, 0b110),
+            Prescaler::Div16 => (ahb_freq / 16, ahb_freq / 8, 0b111),
+            _ => (ahb_freq, ahb_freq, 0b000),
+        };
+
+        self.cfgr.modify(|_, w| unsafe {
+            w.hpre()
+                .bits(ahb_psc_bits)
+                .ppre()
+                .bits(apb_psc_bits)
+                .sw()
+                .bits(sw_bits)
+        });
+
+        while self.cfgr.read().sws().bits() != sw_bits {}
+
         Rcc {
             rb: self.rb,
-            clocks: Clocks::default(),
+            clocks: Clocks {
+                sys_clk,
+                ahb_clk: ahb_freq.Hz(),
+                apb_clk: apb_freq.Hz(),
+                apb_tim_clk: apb_tim_freq.Hz(),
+                core_clk: (ahb_freq / 8).Hz(),
+            },
         }
     }
 
@@ -76,48 +151,41 @@ impl Rcc {
     }
 
     pub(crate) fn enable_lsi(&self) {
-        // self.csr.modify(|_, w| w.lsion().set_bit());
-        // while self.csr.read().lsirdy().bit_is_clear() {}
-        todo!();
+        self.csr2.modify(|_, w| w.lsion().set_bit());
+        while self.csr2.read().lsirdy().bit_is_clear() {}
     }
 
-    pub(crate) fn enable_lse(&self, _bypass: bool) {
-        // self.bdcr
-        //     .modify(|_, w| w.lseon().set_bit().lsebyp().bit(bypass));
-        // while self.bdcr.read().lserdy().bit_is_clear() {}
-
-        todo!();
+    pub(crate) fn enable_lse(&self, bypass: bool) {
+        self.csr1
+            .modify(|_, w| w.lseon().set_bit().lsebyp().bit(bypass));
+        while self.csr1.read().lserdy().bit_is_clear() {}
     }
 
-    pub(crate) fn unlock_rtc(&self) {
+    pub(crate) fn enable_pwr_clock(&self) {
         self.apbenr1.modify(|_, w| w.pwren().set_bit());
-        // let pwr = unsafe { &(*crate::stm32::PWR::ptr()) };
-        // pwr.cr1.modify(|_, w| w dbp().set_bit());
-        // while pwr.cr1.read().dbp().bit_is_clear() {}
     }
 
     pub(crate) fn enable_rtc(&self, src: RTCSrc) {
-        self.unlock_rtc();
+        self.enable_pwr_clock();
         self.apbenr1
             .modify(|_, w| w.rtcapben().set_bit().pwren().set_bit());
         self.apbsmenr1.modify(|_, w| w.rtcapbsmen().set_bit());
-        // self.bdcr.modify(|_, w| w.bdrst().set_bit());
-        // let rtc_sel = match src {
-        //     RTCSrc::LSE | RTCSrc::LSE_BYPASS => 0b01,
-        //     RTCSrc::LSI => 0b10,
-        //     RTCSrc::HSE | RTCSrc::HSE_BYPASS => 0b11,
-        // };
+        self.csr1.modify(|_, w| w.rtcrst().set_bit());
+        let rtc_sel = match src {
+            RTCSrc::LSE | RTCSrc::LSE_BYPASS => 0b01,
+            RTCSrc::LSI => 0b10,
+            RTCSrc::HSE | RTCSrc::HSE_BYPASS => 0b11,
+        };
 
-        // self.bdcr.modify(|_, w| unsafe {
-        //     w.rtcsel()
-        //         .bits(rtc_sel)
-        //         .rtcen()
-        //         .set_bit()
-        //         .bdrst()
-        //         .clear_bit()
-        // });
+        self.csr1.modify(|_, w| {
+            w.rtcsel()
+                .bits(rtc_sel)
+                .rtcen()
+                .set_bit()
+                .rtcrst()
+                .clear_bit()
+        });
 
-        self.unlock_rtc();
         match src {
             RTCSrc::LSE => self.enable_lse(false),
             RTCSrc::LSE_BYPASS => self.enable_lse(true),
@@ -125,7 +193,6 @@ impl Rcc {
             RTCSrc::HSE => self.enable_hse(false),
             RTCSrc::HSE_BYPASS => self.enable_hse(true),
         };
-        todo!();
     }
 }
 

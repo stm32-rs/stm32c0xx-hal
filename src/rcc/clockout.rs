@@ -9,16 +9,14 @@ pub struct Lsco {
 }
 
 impl Lsco {
-    pub fn enable(&self) {
-        // let rcc = unsafe { &(*RCC::ptr()) };
-        // rcc.bdcr.modify(|_, w| w.lscoen().set_bit());
-        todo!();
+    pub fn enable(&mut self) {
+        let rcc = unsafe { &(*RCC::ptr()) };
+        rcc.csr1.modify(|_, w| w.lscoen().set_bit());
     }
 
-    pub fn disable(&self) {
-        // let rcc = unsafe { &(*RCC::ptr()) };
-        // rcc.bdcr.modify(|_, w| w.lscoen().clear_bit());
-        todo!();
+    pub fn disable(&mut self) {
+        let rcc = unsafe { &(*RCC::ptr()) };
+        rcc.csr1.modify(|_, w| w.lscoen().clear_bit());
     }
 
     pub fn release(self) -> LscoPin {
@@ -32,7 +30,7 @@ pub trait LSCOExt {
 
 impl LSCOExt for LscoPin {
     fn lsco(self, src: LSCOSrc, rcc: &mut Rcc) -> Lsco {
-        let _src_select_bit = match src {
+        let src_select_bit = match src {
             LSCOSrc::LSE => {
                 rcc.enable_lse(false);
                 true
@@ -42,9 +40,8 @@ impl LSCOExt for LscoPin {
                 false
             }
         };
-        rcc.unlock_rtc();
         self.set_alt_mode(AltFunction::AF0);
-        // rcc.bdcr.modify(|_, w| w.lscosel().bit(src_select_bit));
+        rcc.csr1.modify(|_, w| w.lscosel().bit(src_select_bit));
         Lsco { pin: self }
     }
 }
@@ -58,13 +55,13 @@ impl<PIN> Mco<PIN>
 where
     PIN: MCOExt<PIN>,
 {
-    pub fn enable(&self) {
+    pub fn enable(&mut self) {
         let rcc = unsafe { &(*RCC::ptr()) };
         rcc.cfgr
             .modify(|_, w| unsafe { w.mcosel().bits(self.src_bits) });
     }
 
-    pub fn disable(&self) {
+    pub fn disable(&mut self) {
         let rcc = unsafe { &(*RCC::ptr()) };
         rcc.cfgr.modify(|_, w| unsafe { w.mcosel().bits(0) });
     }
@@ -95,8 +92,8 @@ macro_rules! mco {
                         _ => 0b111,
                     };
 
-                    rcc.cfgr.modify(|r, w| unsafe {
-                        w.bits((r.bits() & !(0b111 << 28)) | (psc_bits << 28))
+                    rcc.cfgr.modify(|_, w| unsafe {
+                        w.mcopre().bits(psc_bits)
                     });
 
                     let src_bits = match src {
@@ -109,7 +106,6 @@ macro_rules! mco {
                             rcc.enable_hse(false);
                             0b100
                         },
-                        MCOSrc::PLL => 0b101,
                         MCOSrc::LSI => {
                             rcc.enable_lsi();
                             0b110

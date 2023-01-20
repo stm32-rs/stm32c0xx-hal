@@ -14,6 +14,7 @@ use hal::stm32;
 fn main() -> ! {
     let dp = stm32::Peripherals::take().expect("cannot take peripherals");
     let mut rcc = dp.RCC.constrain();
+
     let port_a = dp.GPIOA.split(&mut rcc);
     let port_c = dp.GPIOC.split(&mut rcc);
 
@@ -21,10 +22,10 @@ fn main() -> ! {
     let mut led = port_a.pa5.into_push_pull_output();
 
     loop {
-        if button.is_high().unwrap() {
-            led.set_low().unwrap();
+        if button.is_high().unwrap_or_default() {
+            led.set_low().ok();
         } else {
-            led.set_high().unwrap();
+            led.set_high().ok();
         }
     }
 }

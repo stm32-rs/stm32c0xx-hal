@@ -101,7 +101,7 @@ macro_rules! opm_hal {
                 }
 
                 pub fn get_max_delay(&mut self) -> u32 {
-                    unsafe { (*$TIMX::ptr()).arr.read().bits() }
+                    unsafe { (*$TIMX::ptr()).arr.read().bits() as _ }
                 }
 
                 pub fn set_delay(&mut self, delay: u32) {
@@ -112,7 +112,7 @@ macro_rules! opm_hal {
                 fn setup(&mut self) {
                     unsafe {
                         let tim = &*$TIMX::ptr();
-                        tim.$ccrx.write(|w| w.bits(self.delay));
+                        tim.$ccrx.write(|w| w.bits(self.delay as _));
                         tim.$ccmrx_output().modify(|_, w| w.$ocxm().bits(7).$ocxfe().set_bit());
                     }
                 }
@@ -121,24 +121,24 @@ macro_rules! opm_hal {
     };
 }
 
-// opm_hal! {
-//     TIM1: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1),
-//     TIM1: (Channel2, cc2e, ccmr1_output, oc2m, oc2fe, ccr2),
-//     TIM1: (Channel3, cc3e, ccmr2_output, oc3m, oc3fe, ccr3),
-//     TIM1: (Channel4, cc4e, ccmr2_output, oc4m, oc4fe, ccr4),
-//     TIM3: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1),
-//     TIM3: (Channel2, cc2e, ccmr1_output, oc2m, oc2fe, ccr2),
-//     TIM3: (Channel3, cc3e, ccmr2_output, oc3m, oc3fe, ccr3),
-//     TIM3: (Channel4, cc4e, ccmr2_output, oc4m, oc4fe, ccr4),
-//     TIM14: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1),
-//     TIM16: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1),
-//     TIM17: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1),
-// }
+opm_hal! {
+    TIM1: (Channel1, cc1e, ccmr1_output, oc1m1, oc1fe, ccr1),
+    TIM1: (Channel2, cc2e, ccmr1_output, oc2m1, oc2fe, ccr2),
+    TIM1: (Channel3, cc3e, ccmr2_output, oc3m1, oc3fe, ccr3),
+    TIM1: (Channel4, cc4e, ccmr2_output, oc4m1, oc4fe, ccr4),
+    TIM3: (Channel1, cc1e, ccmr1_output, oc1m1, oc1fe, ccr1),
+    TIM3: (Channel2, cc2e, ccmr1_output, oc2m1, oc2fe, ccr2),
+    TIM3: (Channel3, cc3e, ccmr2_output, oc3m1, oc3fe, ccr3),
+    TIM3: (Channel4, cc4e, ccmr2_output, oc4m1, oc4fe, ccr4),
+    TIM14: (Channel1, cc1e, ccmr1_output, oc1m1, oc1fe, ccr1),
+    TIM16: (Channel1, cc1e, ccmr1_output, oc1m1, oc1fe, ccr1),
+    TIM17: (Channel1, cc1e, ccmr1_output, oc1m1, oc1fe, ccr1),
+}
 
-// opm! {
-//     TIM1: (tim1, arr),
-//     TIM3: (tim3, arr_l, arr_h),
-//     TIM14: (tim14, arr),
-//     TIM16: (tim16, arr),
-//     TIM17: (tim17, arr),
-// }
+opm! {
+    TIM1: (tim1, arr),
+    TIM3: (tim3, arr),
+    TIM14: (tim14, arr),
+    TIM16: (tim16, arr),
+    TIM17: (tim17, arr),
+}

@@ -14,8 +14,7 @@ impl IndependedWatchdog {
     }
 
     pub fn start(&mut self, period: MicroSecond) {
-        //TODO: check IndependedWatchdog clocks
-        let mut cycles = crate::time::cycles(period, 16_384.Hz());
+        let mut cycles = crate::time::cycles(period, (32_768 / 4).Hz());
         let mut psc = 0;
         let mut reload = 0;
         while psc < 6 {
@@ -148,7 +147,6 @@ pub trait WWDGExt {
 impl WWDGExt for WWDG {
     fn constrain(self, rcc: &mut Rcc) -> WindowWatchdog {
         WWDG::enable(rcc);
-        //TODO: check WWDG clock prescaler
         let clk = rcc.clocks.apb_clk.raw() / 4096;
         WindowWatchdog {
             wwdg: self,

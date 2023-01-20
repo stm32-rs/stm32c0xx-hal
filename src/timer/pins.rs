@@ -64,7 +64,7 @@ macro_rules! trigger_pins {
                         }
                     };
 
-                    tim.smcr.modify(|_, w| unsafe { w.ts().bits(ts) });
+                    tim.smcr.modify(|_, w| w.ts1().bits(ts) );
 
                     Self {
                         pin,
@@ -86,6 +86,7 @@ macro_rules! trigger_pins {
     };
 }
 
+// TODO: port pin mapping
 trigger_pins!(TIM1, [
     (PA8<DefaultMode>, cc1p),
     (PC8<DefaultMode>, cc1p),

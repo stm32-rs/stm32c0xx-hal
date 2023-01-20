@@ -109,7 +109,7 @@ macro_rules! delays {
                     while cycles > 0 {
                         let reload = cmp::min(cycles, 0xffff);
                         cycles -= reload;
-                        self.tim.arr.write(|w| unsafe { w.bits(reload) });
+                        self.tim.arr.write(|w| unsafe { w.bits(reload as _) });
                         self.tim.cnt.reset();
                         self.tim.cr1.modify(|_, w| w.cen().set_bit().urs().set_bit());
                         while self.tim.sr.read().uif().bit_is_clear() {}
@@ -168,10 +168,10 @@ macro_rules! delays {
     }
 }
 
-// delays! {
-//     TIM1: tim1,
-//     TIM3: tim3,
-//     TIM14: tim14,
-//     TIM16: tim16,
-//     TIM17: tim17,
-// }
+delays! {
+    TIM1: tim1,
+    TIM3: tim3,
+    TIM14: tim14,
+    TIM16: tim16,
+    TIM17: tim17,
+}

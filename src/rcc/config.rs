@@ -18,7 +18,6 @@ pub enum Prescaler {
 /// System clock mux source
 pub enum SysClockSrc {
     LSI,
-    PLL,
     HSI(Prescaler),
     HSE(Hertz),
     HSE_BYPASS(Hertz),
@@ -29,7 +28,6 @@ pub enum SysClockSrc {
 /// Microcontroller clock output source
 pub enum MCOSrc {
     LSI,
-    PLL,
     SysClk,
     HSI,
     HSE,
@@ -64,12 +62,28 @@ impl Config {
         Config::default().clock_src(mux)
     }
 
+    pub fn hse(freq: Hertz) -> Self {
+        Config::default().clock_src(SysClockSrc::HSE(freq))
+    }
+
+    pub fn hse_bypass(freq: Hertz) -> Self {
+        Config::default().clock_src(SysClockSrc::HSE_BYPASS(freq))
+    }
+
     pub fn hsi(psc: Prescaler) -> Self {
         Config::default().clock_src(SysClockSrc::HSI(psc))
     }
 
     pub fn lsi() -> Self {
         Config::default().clock_src(SysClockSrc::LSI)
+    }
+
+    pub fn lse(freq: Hertz) -> Self {
+        Config::default().clock_src(SysClockSrc::LSE(freq))
+    }
+
+    pub fn lse_bypass(freq: Hertz) -> Self {
+        Config::default().clock_src(SysClockSrc::LSE_BYPASS(freq))
     }
 
     pub fn clock_src(mut self, mux: SysClockSrc) -> Self {
@@ -91,7 +105,7 @@ impl Config {
 impl Default for Config {
     fn default() -> Config {
         Config {
-            sys_mux: SysClockSrc::HSI(Prescaler::NotDivided),
+            sys_mux: SysClockSrc::HSI(Prescaler::Div4),
             ahb_psc: Prescaler::NotDivided,
             apb_psc: Prescaler::NotDivided,
         }

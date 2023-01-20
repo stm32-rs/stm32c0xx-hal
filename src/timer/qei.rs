@@ -47,12 +47,10 @@ macro_rules! qei {
                     $TIMX::reset(rcc);
 
                     // Configure TxC1 and TxC2 as captures
-                    tim.ccmr1_output().write(|w| unsafe {
-                        w.cc1s().bits(0b01).cc2s().bits(0b01)
-                    });
+                    tim.ccmr1_output().write(|w| w.cc1s().bits(0b01).cc2s().bits(0b01));
 
                     // Encoder mode 2.
-                    tim.smcr.write(|w| unsafe { w.sms().bits(0b010) });
+                    tim.smcr.write(|w| w.sms1().bits(0b010));
 
                     // Enable and configure to capture on rising edge
                     tim.ccer.write(|w| {
@@ -106,7 +104,7 @@ macro_rules! qei {
     }
 }
 
-// qei! {
-//     TIM1: (tim1, arr, cnt),
-//     TIM3: (tim3, arr_l, cnt_l),
-// }
+qei! {
+    TIM1: (tim1, arr, cnt),
+    TIM3: (tim3, arr, cnt),
+}

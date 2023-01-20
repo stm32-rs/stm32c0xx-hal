@@ -38,7 +38,7 @@ pub mod rtc;
 pub mod serial;
 pub mod spi;
 pub mod time;
-// pub mod timer;
+pub mod timer;
 pub mod watchdog;
 
 #[cfg(feature = "device-selected")]

@@ -302,23 +302,21 @@ impl Rtc {
     pub fn enable_calibration_output<PIN: RtcOutputPin>(
         &mut self,
         pin: PIN,
-        _freq: RtcCalibrationFrequency,
+        freq: RtcCalibrationFrequency,
     ) {
         pin.setup();
-        // self.modify(|rb| {
-        //     rb.cr.modify(|_, w| unsafe {
-        //         w.osel()
-        //             .bits(0b0)
-        //             .out2en()
-        //             .bit(pin.channel())
-        //             .cosel()
-        //             .bit(freq == RtcCalibrationFrequency::F1Hz)
-        //             .tampoe()
-        //             .clear_bit()
-        //             .coe()
-        //             .set_bit()
-        //     });
-        // });
+        self.modify(|rb| {
+            rb.cr.modify(|_, w| unsafe {
+                w.osel()
+                    .bits(0b0)
+                    .out2en()
+                    .bit(pin.channel())
+                    .cosel()
+                    .bit(freq == RtcCalibrationFrequency::F1Hz)
+                    .coe()
+                    .set_bit()
+            });
+        });
         todo!();
     }
 
