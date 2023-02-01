@@ -21,7 +21,7 @@ nb = "1.0.0"
 fugit = "0.3.5"
 
 [dependencies.stm32c0]
-path = "../stm32-rs/stm32c0"
+git = "https://github.com/stm32-rs/stm32-rs-nightlies"
 features = ["rt"]
 
 [dependencies.bare-metal]
