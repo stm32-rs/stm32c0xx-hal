@@ -9,9 +9,9 @@ extern crate panic_halt;
 extern crate stm32c0xx_hal as hal;
 
 use hal::prelude::*;
+use hal::rcc::Config;
 use hal::stm32;
 use rt::entry;
-use hal::rcc::Config;
 
 #[allow(clippy::empty_loop)]
 #[entry]
