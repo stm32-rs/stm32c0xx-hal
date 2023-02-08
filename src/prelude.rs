@@ -2,10 +2,6 @@ pub use crate::analog::adc::AdcExt as _;
 pub use crate::crc::CrcExt as _;
 pub use crate::exti::ExtiExt as _;
 pub use crate::gpio::GpioExt as _;
-#[cfg(feature = "i2c-nonblocking")]
-pub use crate::i2c::nonblocking::I2cSlave;
-#[cfg(feature = "i2c-blocking")]
-pub use crate::i2c::blocking::I2cSlave;
 pub use crate::i2c::I2cExt as _;
 pub use crate::power::PowerExt as _;
 pub use crate::rcc::LSCOExt as _;
@@ -29,3 +25,9 @@ pub use hal::digital::v2::*;
 pub use hal::prelude::*;
 pub use hal::watchdog::Watchdog as _;
 pub use hal::watchdog::WatchdogEnable as _;
+
+#[cfg(feature = "i2c-nonblocking")]
+pub use crate::i2c::nonblocking::I2cSlave;
+
+#[cfg(feature = "i2c-blocking")]
+pub use crate::i2c::blocking::I2cSlave;
