@@ -3,7 +3,7 @@ use crate::gpio::SignalEdge;
 use crate::stm32::EXTI;
 
 /// EXTI trigger event
-#[derive(Eq, PartialEq, PartialOrd, Clone, Copy)]
+#[derive(Eq, PartialEq, PartialOrd, Clone, Copy, Debug)]
 pub enum Event {
     GPIO0 = 0,
     GPIO1 = 1,
@@ -21,16 +21,9 @@ pub enum Event {
     GPIO13 = 13,
     GPIO14 = 14,
     GPIO15 = 15,
-    PVD = 16,
     RTC = 19,
-    TAMP = 21,
     I2C1 = 23,
     USART1 = 25,
-    USART2 = 26,
-    CEC = 27,
-    LPUART1 = 28,
-    LPTIM1 = 29,
-    LPTIM2 = 30,
     LSE_CSS = 31,
 }
 

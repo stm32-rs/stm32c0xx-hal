@@ -4,7 +4,7 @@ use crate::gpio::{AltFunction, OpenDrain, Output};
 use crate::i2c::config::Config;
 use crate::i2c::{Error, I2c, I2cDirection, I2cExt, I2cResult, SCLPin, SDAPin};
 use crate::rcc::*;
-use crate::stm32::{I2C1, I2C2};
+use crate::stm32::I2C;
 use nb::Error::{Other, WouldBlock};
 
 pub trait I2cControl {
@@ -101,13 +101,13 @@ macro_rules! flush_rxdr {
 
 macro_rules! i2c {
     ($I2CX:ident, $i2cx:ident,
-        sda: [ $($PSDA:ty,)+ ],
-        scl: [ $($PSCL:ty,)+ ],
+        sda: [ $(($PSDA:ty, $AFSDA:expr),)+ ],
+        scl: [ $(($PSCL:ty, $AFSCL:expr),)+ ],
     ) => {
         $(
             impl SDAPin<$I2CX> for $PSDA {
                 fn setup(&self) {
-                    self.set_alt_mode(AltFunction::AF6)
+                    self.set_alt_mode($AFSDA)
                 }
 
                 fn release(self) -> Self {
@@ -119,7 +119,7 @@ macro_rules! i2c {
         $(
             impl SCLPin<$I2CX> for $PSCL {
                 fn setup(&self) {
-                    self.set_alt_mode(AltFunction::AF6)
+                    self.set_alt_mode($AFSCL)
                 }
 
                 fn release(self) -> Self {
@@ -175,22 +175,11 @@ macro_rules! i2c {
                 });
 
                 if config.slave_address_1 > 0 {
-                    if config.address_11bits {
-                        i2c.oar1.write(|w| unsafe {
-                            let addr = config.slave_address_1;
-                            w.oa1_0() .bit(addr&0x1  == 0x1)
-                            .oa1_7_1().bits( ((addr >> 1)  & 0x7F )as u8)
-                            .oa1_8_9().bits( ((addr >> 8)  & 0x3  )as u8)
-                            .oa1mode().set_bit()
-                            .oa1en().set_bit()
-                        });
-                    }else {
-                        i2c.oar1.write(|w| unsafe {
-                            w.oa1_7_1().bits(config.slave_address_1 as u8)
-                            .oa1mode().clear_bit()
-                            .oa1en().set_bit()
-                        });
-                    }
+                    i2c.oar1.write(|w| unsafe {
+                        w.oa1().bits(config.slave_address_1)
+                        .oa1mode().bit(config.address_11bits)
+                        .oa1en().set_bit()
+                    });
                     // Enable acknowlidge control
                     i2c.cr1.modify(|_, w|  w.sbc().set_bit() );
                 }
@@ -202,7 +191,7 @@ macro_rules! i2c {
                         .oa2en().set_bit()
                     });
                     // Enable acknowlidge control
-                    i2c.cr1.modify(|_, w|  w.sbc().set_bit() );
+                    i2c.cr1.modify(|_, w| w.sbc().set_bit() );
                 }
 
                 // Enable pins
@@ -268,11 +257,11 @@ macro_rules! i2c {
                         self.errors += 1;
                         self.watchdog = 0;
                         // Disable I2C processing, resetting all hardware state machines
-                        self.i2c.cr1.modify(|_, w| unsafe {w.pe().clear_bit() } );
+                        self.i2c.cr1.modify(|_, w| w.pe().clear_bit());
                         // force enough wait states for the pe clear
                         let _ = self.i2c.cr1.read();
                         // Enable the I2C processing again
-                        self.i2c.cr1.modify(|_, w| unsafe {w.pe().set_bit() });
+                        self.i2c.cr1.modify(|_, w| w.pe().set_bit());
                     },
                     _ => {self.watchdog -= 1},
                 }
@@ -372,14 +361,14 @@ macro_rules! i2c {
                         return Err( WouldBlock)
                     } else
                     if self.index == 0 {
-                        self.i2c.cr2.modify(|_, w| unsafe {
+                        self.i2c.cr2.modify(|_, w| {
                             w.stop().set_bit()
                         });
                         self.errors += 1;
                         return Err( Other(Error::Nack))
                     } else
                     {
-                        self.i2c.cr2.modify(|_, w| unsafe {
+                        self.i2c.cr2.modify(|_, w| {
                             w.stop().set_bit()
                         });
                         self.errors += 1;
@@ -555,12 +544,12 @@ macro_rules! i2c {
 
             fn set_address(&mut self, address:u16) {
                 self.i2c.oar1.write(|w| unsafe {
-                    w.oa1_7_1().bits(address as u8)
+                    w.oa1().bits(address as _)
                     .oa1en().clear_bit()
                 });
                 // set the 7 bits address
                 self.i2c.oar1.write(|w| unsafe {
-                    w.oa1_7_1().bits(address as u8)
+                    w.oa1().bits(address as _)
                     .oa1mode().clear_bit()
                     .oa1en().set_bit()
                 });
@@ -568,7 +557,6 @@ macro_rules! i2c {
 
             fn slave_write(&mut self, bytes: &[u8]) -> Result<(), Error> {
                 let buflen = bytes.len();
-                // TODO support transfers of more than 255 bytes
                 assert!(buflen < 256 && buflen > 0);
 
                 self.length = buflen;
@@ -601,31 +589,18 @@ macro_rules! i2c {
 }
 
 i2c!(
-    I2C1,
+    I2C,
     i2c1,
     sda: [
-        PA10<Output<OpenDrain>>,
-        PB7<Output<OpenDrain>>,
-        PB9<Output<OpenDrain>>,
+        (PA10<Output<OpenDrain>>, AltFunction::AF6),
+        (PB7<Output<OpenDrain>>, AltFunction::AF6),
+        (PB9<Output<OpenDrain>>, AltFunction::AF6),
+        (PC14<Output<OpenDrain>>, AltFunction::AF14),
     ],
     scl: [
-        PA9<Output<OpenDrain>>,
-        PB6<Output<OpenDrain>>,
-        PB8<Output<OpenDrain>>,
-    ],
-);
-
-i2c!(
-    I2C2,
-    i2c2,
-    sda: [
-        PA12<Output<OpenDrain>>,
-        PB11<Output<OpenDrain>>,
-        PB14<Output<OpenDrain>>,
-    ],
-    scl: [
-        PA11<Output<OpenDrain>>,
-        PB10<Output<OpenDrain>>,
-        PB13<Output<OpenDrain>>,
+        (PA9<Output<OpenDrain>>, AltFunction::AF6),
+        (PB6<Output<OpenDrain>>, AltFunction::AF6),
+        (PB8<Output<OpenDrain>>, AltFunction::AF6),
+        (PB7<Output<OpenDrain>>, AltFunction::AF14),
     ],
 );

@@ -112,13 +112,13 @@ macro_rules! busy_wait {
 
 macro_rules! i2c {
     ($I2CX:ident, $i2cx:ident,
-        sda: [ $($PSDA:ty,)+ ],
-        scl: [ $($PSCL:ty,)+ ],
+        sda: [ $(($PSDA:ty, $AFSDA:expr),)+ ],
+        scl: [ $(($PSCL:ty, $AFSCL:expr),)+ ],
     ) => {
         $(
             impl SDAPin<$I2CX> for $PSDA {
                 fn setup(&self) {
-                    self.set_alt_mode(AltFunction::AF6)
+                    self.set_alt_mode($AFSDA)
                 }
 
                 fn release(self) -> Self {
@@ -130,7 +130,7 @@ macro_rules! i2c {
         $(
             impl SCLPin<$I2CX> for $PSCL {
                 fn setup(&self) {
-                    self.set_alt_mode(AltFunction::AF6)
+                    self.set_alt_mode($AFSCL)
                 }
 
                 fn release(self) -> Self {
@@ -247,7 +247,6 @@ macro_rules! i2c {
                 snd_buffer: &[u8],
                 rcv_buffer: &mut [u8],
             ) -> Result<(), Self::Error> {
-                // TODO support transfers of more than 255 bytes
                 let sndlen = snd_buffer.len();
                 let rcvlen = rcv_buffer.len();
                 assert!(sndlen < 256 && sndlen > 0);
@@ -368,7 +367,6 @@ macro_rules! i2c {
 
             fn read(&mut self, addr: u8, bytes: &mut [u8]) -> Result<(), Self::Error> {
                 let buflen = bytes.len();
-                // TODO support transfers of more than 255 bytes
                 assert!(buflen < 256 && buflen > 0);
 
                 // Wait for any previous address sequence to end automatically.
@@ -443,7 +441,6 @@ macro_rules! i2c {
 
             fn slave_write(&mut self, bytes: &[u8]) -> Result<(), Error> {
                 let buflen = bytes.len();
-                // TODO support transfers of more than 255 bytes
                 assert!(buflen < 256 && buflen > 0);
 
                 // Set the nbytes and prepare to send bytes into `buffer`.
@@ -476,7 +473,6 @@ macro_rules! i2c {
 
             fn slave_read(&mut self, bytes: &mut [u8]) -> Result<(), Error> {
                 let buflen = bytes.len();
-                // TODO support transfers of more than 255 bytes
                 assert!(buflen < 256 && buflen > 0);
 
                 // Set the nbytes START and prepare to receive bytes into `buffer`.
@@ -513,13 +509,15 @@ i2c!(
     I2C,
     i2c1,
     sda: [
-        PA10<Output<OpenDrain>>,
-        PB7<Output<OpenDrain>>,
-        PB9<Output<OpenDrain>>,
+        (PA10<Output<OpenDrain>>, AltFunction::AF6),
+        (PB7<Output<OpenDrain>>, AltFunction::AF6),
+        (PB9<Output<OpenDrain>>, AltFunction::AF6),
+        (PC14<Output<OpenDrain>>, AltFunction::AF14),
     ],
     scl: [
-        PA9<Output<OpenDrain>>,
-        PB6<Output<OpenDrain>>,
-        PB8<Output<OpenDrain>>,
+        (PA9<Output<OpenDrain>>, AltFunction::AF6),
+        (PB6<Output<OpenDrain>>, AltFunction::AF6),
+        (PB8<Output<OpenDrain>>, AltFunction::AF6),
+        (PB7<Output<OpenDrain>>, AltFunction::AF14),
     ],
 );
