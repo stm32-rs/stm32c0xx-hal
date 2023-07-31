@@ -8,7 +8,7 @@ use crate::gpio::{
 use crate::rcc::{self, *};
 use crate::serial;
 use crate::serial::config::*;
-use crate::{gpio, prelude::*};
+use crate::{gpio, pac, prelude::*};
 
 use nb::block;
 
@@ -71,6 +71,9 @@ impl Event {
         self as u32
     }
 }
+
+impl crate::Sealed for pac::USART1 {}
+impl crate::Sealed for pac::USART2 {}
 
 pub trait Instance: crate::Sealed + rcc::Enable + rcc::Reset + CommonPins + Rs485 {
     type RegisterBlock;
