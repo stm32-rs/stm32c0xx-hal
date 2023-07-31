@@ -710,6 +710,9 @@ pub mod usart1 {
         type Rx<Otype> = Rx<Otype>;
         type Tx<Otype> = Tx<Otype>;
     }
+    impl SerialRs485 for USART {
+        type De = De;
+    }
     impl SerialSync for USART {
         type Ck = Ck;
     }
@@ -804,6 +807,9 @@ pub mod usart2 {
     impl SerialAsync for USART {
         type Rx<Otype> = Rx<Otype>;
         type Tx<Otype> = Tx<Otype>;
+    }
+    impl SerialRs485 for USART {
+        type De = De;
     }
     impl SerialSync for USART {
         type Ck = Ck;

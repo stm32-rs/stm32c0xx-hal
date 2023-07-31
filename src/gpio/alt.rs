@@ -271,6 +271,9 @@ pub trait SerialAsync {
 pub trait SerialSync {
     type Ck;
 }
+pub trait SerialRs485 {
+    type De;
+}
 /// Hardware flow control (RS232)
 pub trait SerialRs232 {
     /// Receive

@@ -1,12 +1,14 @@
 use core::fmt;
 use core::marker::PhantomData;
 
-use crate::gpio::{AltFunction, *};
-use crate::prelude::*;
-use crate::rcc::*;
+use crate::gpio::{
+    alt::{SerialAsync as CommonPins, SerialRs485 as Rs485},
+    PushPull,
+};
+use crate::rcc::{self, *};
 use crate::serial;
 use crate::serial::config::*;
-use crate::stm32::*;
+use crate::{gpio, prelude::*};
 
 use nb::block;
 
@@ -70,113 +72,78 @@ impl Event {
     }
 }
 
+pub trait Instance: crate::Sealed + rcc::Enable + rcc::Reset + CommonPins + Rs485 {
+    type RegisterBlock;
+
+    #[doc(hidden)]
+    fn ptr() -> *const Self::RegisterBlock;
+}
+
 /// Serial receiver
-pub struct Rx<USART> {
+pub struct Rx<USART: Instance> {
     _usart: PhantomData<USART>,
+    pin: USART::Rx<PushPull>,
 }
 
 /// Serial transmitter
-pub struct Tx<USART> {
+pub struct Tx<USART: Instance> {
     _usart: PhantomData<USART>,
+    pin: USART::Tx<PushPull>,
 }
 
 /// Serial abstraction
-pub struct Serial<USART> {
+pub struct Serial<USART: Instance> {
     tx: Tx<USART>,
     rx: Rx<USART>,
     usart: USART,
+    depin: Option<USART::De>,
 }
 
-// Serial TX pin
-pub trait TxPin<USART> {
-    fn setup(&self);
-    fn release(self) -> Self;
-}
+/// A filler type for when the Tx pin is unnecessary
+pub use gpio::NoPin as NoTx;
+/// A filler type for when the Rx pin is unnecessary
+pub use gpio::NoPin as NoRx;
 
-// Serial RX pin
-pub trait RxPin<USART> {
-    fn setup(&self);
-    fn release(self) -> Self;
-}
-
-pub struct NoTx;
-
-impl<USART> TxPin<USART> for NoTx {
-    fn setup(&self) {}
-
-    fn release(self) -> Self {
-        self
-    }
-}
-pub struct NoRx;
-
-impl<USART> RxPin<USART> for NoRx {
-    fn setup(&self) {}
-
-    fn release(self) -> Self {
-        self
-    }
-}
-
-// Driver enable pin
-pub trait DriverEnablePin<USART> {
-    fn setup(&self);
-    fn release(self) -> Self;
-}
-
-// Serial pins
-pub trait Pins<USART> {
-    const DRIVER_ENABLE: bool;
-
-    fn setup(&self);
-    fn release(self) -> Self;
-}
-
-// Duplex mode
-impl<USART, TX, RX> Pins<USART> for (TX, RX)
-where
-    TX: TxPin<USART>,
-    RX: RxPin<USART>,
-{
-    const DRIVER_ENABLE: bool = false;
-
-    fn setup(&self) {
-        self.0.setup();
-        self.1.setup();
-    }
-
-    fn release(self) -> Self {
-        (self.0.release(), self.1.release())
-    }
-}
-
-// Duplex mode with driver enabled
-impl<USART, TX, RX, DE> Pins<USART> for (TX, RX, DE)
-where
-    TX: TxPin<USART>,
-    RX: RxPin<USART>,
-    DE: DriverEnablePin<USART>,
-{
-    const DRIVER_ENABLE: bool = true;
-
-    fn setup(&self) {
-        self.0.setup();
-        self.1.setup();
-        self.2.setup();
-    }
-
-    fn release(self) -> Self {
-        (self.0.release(), self.1.release(), self.2.release())
-    }
-}
-
-pub trait SerialExt<USART> {
-    fn usart<PINS: Pins<USART>>(
+pub trait SerialExt: Sized + Instance {
+    fn usart(
         self,
-        pins: PINS,
+        pins: (impl Into<Self::Tx<PushPull>>, impl Into<Self::Rx<PushPull>>),
         config: serial::Config,
         rcc: &mut Rcc,
-    ) -> Result<Serial<USART>, InvalidConfig>;
+    ) -> Result<Serial<Self>, InvalidConfig>;
+    fn rs485(
+        self,
+        pins: (
+            impl Into<Self::Tx<PushPull>>,
+            impl Into<Self::Rx<PushPull>>,
+            impl Into<Self::De>,
+        ),
+        config: serial::Config,
+        rcc: &mut Rcc,
+    ) -> Result<Serial<Self>, InvalidConfig>;
+}
+
+impl<USART: Instance> SerialExt for USART {
+    fn usart(
+        self,
+        pins: (impl Into<Self::Tx<PushPull>>, impl Into<Self::Rx<PushPull>>),
+        config: serial::Config,
+        rcc: &mut Rcc,
+    ) -> Result<Serial<Self>, InvalidConfig> {
+        Serial::new(self, pins, config, rcc)
+    }
+    fn rs485(
+        self,
+        pins: (
+            impl Into<Self::Tx<PushPull>>,
+            impl Into<Self::Rx<PushPull>>,
+            impl Into<Self::De>,
+        ),
+        config: serial::Config,
+        rcc: &mut Rcc,
+    ) -> Result<Serial<Self>, InvalidConfig> {
+        Serial::rs485(self, pins, config, rcc)
+    }
 }
 
 impl<USART> fmt::Write for Serial<USART>
@@ -199,389 +166,290 @@ where
     }
 }
 
-macro_rules! uart_shared {
-    ($USARTX:ident, $dmamux_rx:ident, $dmamux_tx:ident,
-        tx: [ $(($PTX:ident, $TAF:expr),)+ ],
-        rx: [ $(($PRX:ident, $RAF:expr),)+ ],
-        de: [ $(($PDE:ident, $DAF:expr),)+ ]) => {
+impl<USART: Instance> Rx<USART> {
+    pub fn listen(&mut self) {
+        let usart = unsafe { &(*USART::ptr()) };
+        usart.cr1_disabled().modify(|_, w| w.rxneie().set_bit());
+    }
 
-        $(
-            impl<MODE> TxPin<$USARTX> for $PTX<MODE> {
-                fn setup(&self) {
-                    self.set_alt_mode($TAF)
-                }
+    /// Stop listening for an interrupt event
+    pub fn unlisten(&mut self) {
+        let usart = unsafe { &(*USART::ptr()) };
+        usart.cr1_disabled().modify(|_, w| w.rxneie().clear_bit());
+    }
 
-                fn release(self) -> Self {
-                    self
-                }
-            }
-        )+
+    /// Return true if the rx register is not empty (and can be read)
+    pub fn is_rxne(&self) -> bool {
+        let usart = unsafe { &(*USART::ptr()) };
+        usart.isr_disabled().read().rxne().bit_is_set()
+    }
+}
 
-        $(
-            impl<MODE> RxPin<$USARTX> for $PRX<MODE> {
-                fn setup(&self) {
-                    self.set_alt_mode($RAF)
-                }
+impl<USART: Instance> hal::serial::Read<u8> for Rx<USART> {
+    type Error = Error;
 
-                fn release(self) -> Self {
-                    self
-                }
-            }
-        )+
+    fn read(&mut self) -> nb::Result<u8, Error> {
+        let usart = unsafe { &(*USART::ptr()) };
+        let isr = usart.isr_enabled().read();
 
-        $(
-            impl<MODE> DriverEnablePin<$USARTX> for $PDE<MODE> {
-                fn setup(&self) {
-                    self.set_alt_mode($DAF)
-                }
+        Err(if isr.pe().bit_is_set() {
+            usart.icr.write(|w| w.pecf().set_bit());
+            nb::Error::Other(Error::Parity)
+        } else if isr.fe().bit_is_set() {
+            usart.icr.write(|w| w.fecf().set_bit());
+            nb::Error::Other(Error::Framing)
+        } else if isr.ne().bit_is_set() {
+            usart.icr.write(|w| w.necf().set_bit());
+            nb::Error::Other(Error::Noise)
+        } else if isr.ore().bit_is_set() {
+            usart.icr.write(|w| w.orecf().set_bit());
+            nb::Error::Other(Error::Overrun)
+        } else if isr.rxfne().bit_is_set() {
+            return Ok(usart.rdr.read().bits() as u8);
+        } else {
+            nb::Error::WouldBlock
+        })
+    }
+}
 
-                fn release(self) -> Self {
-                    self
-                }
-            }
-        )+
+impl<USART: Instance> hal::serial::Read<u8> for Serial<USART> {
+    type Error = Error;
 
-        impl Rx<$USARTX> {
-            pub fn listen(&mut self) {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.cr1_disabled().modify(|_, w| w.rxneie().set_bit());
-            }
+    fn read(&mut self) -> nb::Result<u8, Error> {
+        self.rx.read()
+    }
+}
 
-            /// Stop listening for an interrupt event
-            pub fn unlisten(&mut self) {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.cr1_disabled().modify(|_, w| w.rxneie().clear_bit());
-            }
+impl<USART: Instance> Tx<USART> {
+    /// Starts listening for an interrupt event
+    pub fn listen(&mut self) {
+        let usart = unsafe { &(*USART::ptr()) };
+        usart.cr1_disabled().modify(|_, w| w.txeie().set_bit());
+    }
 
-            /// Return true if the rx register is not empty (and can be read)
-            pub fn is_rxne(&self) -> bool {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr_disabled().read().rxne().bit_is_set()
-            }
+    /// Stop listening for an interrupt event
+    pub fn unlisten(&mut self) {
+        let usart = unsafe { &(*USART::ptr()) };
+        usart.cr1_disabled().modify(|_, w| w.txeie().clear_bit());
+    }
+
+    /// Return true if the tx register is empty (and can accept data)
+    pub fn is_txe(&self) -> bool {
+        let usart = unsafe { &(*USART::ptr()) };
+        usart.isr_disabled().read().txe().bit_is_set()
+    }
+}
+
+impl<USART: Instance> hal::serial::Write<u8> for Tx<USART> {
+    type Error = Error;
+
+    fn flush(&mut self) -> nb::Result<(), Self::Error> {
+        let usart = unsafe { &(*USART::ptr()) };
+        if usart.isr_disabled().read().tc().bit_is_set() {
+            Ok(())
+        } else {
+            Err(nb::Error::WouldBlock)
         }
+    }
 
-        impl hal::serial::Read<u8> for Rx<$USARTX> {
-            type Error = Error;
-
-            fn read(&mut self) -> nb::Result<u8, Error> {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                let isr = usart.isr_enabled().read();
-
-                Err(
-                    if isr.pe().bit_is_set() {
-                        usart.icr.write(|w| w.pecf().set_bit());
-                        nb::Error::Other(Error::Parity)
-                    } else if isr.fe().bit_is_set() {
-                        usart.icr.write(|w| w.fecf().set_bit());
-                        nb::Error::Other(Error::Framing)
-                    } else if isr.ne().bit_is_set() {
-                        usart.icr.write(|w| w.necf().set_bit());
-                        nb::Error::Other(Error::Noise)
-                    } else if isr.ore().bit_is_set() {
-                        usart.icr.write(|w| w.orecf().set_bit());
-                        nb::Error::Other(Error::Overrun)
-                    } else if isr.rxfne().bit_is_set() {
-                        return Ok(usart.rdr.read().bits() as u8)
-                    } else {
-                        nb::Error::WouldBlock
-                    }
-                )
-            }
-        }
-
-        impl hal::serial::Read<u8> for Serial<$USARTX> {
-            type Error = Error;
-
-            fn read(&mut self) -> nb::Result<u8, Error> {
-                self.rx.read()
-            }
-        }
-
-        impl Tx<$USARTX> {
-            /// Starts listening for an interrupt event
-            pub fn listen(&mut self) {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.cr1_disabled().modify(|_, w| w.txeie().set_bit());
-            }
-
-            /// Stop listening for an interrupt event
-            pub fn unlisten(&mut self) {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.cr1_disabled().modify(|_, w| w.txeie().clear_bit());
-            }
-
-            /// Return true if the tx register is empty (and can accept data)
-            pub fn is_txe(&self) -> bool {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr_disabled().read().txe().bit_is_set()
-            }
-        }
-
-        impl hal::serial::Write<u8> for Tx<$USARTX> {
-            type Error = Error;
-
-            fn flush(&mut self) -> nb::Result<(), Self::Error> {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                if usart.isr_disabled().read().tc().bit_is_set() {
-                    Ok(())
-                } else {
-                    Err(nb::Error::WouldBlock)
-                }
-            }
-
-            fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                if usart.isr_disabled().read().txe().bit_is_set() {
-                    usart.tdr.write(|w| unsafe { w.bits(byte as u32) });
-                    Ok(())
-                } else {
-                    Err(nb::Error::WouldBlock)
-                }
-            }
-        }
-
-        impl hal::serial::Write<u8> for Serial<$USARTX> {
-            type Error = Error;
-
-            fn flush(&mut self) -> nb::Result<(), Self::Error> {
-                self.tx.flush()
-            }
-
-            fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
-                self.tx.write(byte)
-            }
-        }
-
-        impl Serial<$USARTX> {
-
-            /// Separates the serial struct into separate channel objects for sending (Tx) and
-            /// receiving (Rx)
-            pub fn split(self) -> (Tx<$USARTX>, Rx<$USARTX>) {
-                (self.tx, self.rx)
-            }
-
+    fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
+        let usart = unsafe { &(*USART::ptr()) };
+        if usart.isr_disabled().read().txe().bit_is_set() {
+            usart.tdr.write(|w| unsafe { w.bits(byte as u32) });
+            Ok(())
+        } else {
+            Err(nb::Error::WouldBlock)
         }
     }
 }
 
-macro_rules! uart {
-    ($USARTX:ident,
-        $usartX:ident, $clk_mul:expr
-    ) => {
-        impl SerialExt<$USARTX> for $USARTX {
-            fn usart<PINS: Pins<$USARTX>>(
-                self,
-                pins: PINS,
-                config: serial::Config,
-                rcc: &mut Rcc,
-            ) -> Result<Serial<$USARTX>, InvalidConfig> {
-                Serial::$usartX(self, pins, config, rcc)
-            }
-        }
+impl<USART: Instance> hal::serial::Write<u8> for Serial<USART> {
+    type Error = Error;
 
-        impl Serial<$USARTX> {
-            pub fn $usartX<PINS: Pins<$USARTX>>(
-                usart: $USARTX,
-                pins: PINS,
-                config: serial::Config,
-                rcc: &mut Rcc,
-            ) -> Result<Self, InvalidConfig> {
-                // Enable clock for USART
-                $USARTX::enable(rcc);
+    fn flush(&mut self) -> nb::Result<(), Self::Error> {
+        self.tx.flush()
+    }
 
-                let clk = rcc.clocks.apb_clk.raw() as u64;
-                let bdr = config.baudrate.0 as u64;
-                let clk_mul = 1;
-                let div = (clk_mul * clk) / bdr;
-                usart.brr.write(|w| unsafe { w.bits(div as u32) });
-
-                // usart.cr1.reset();
-                usart.cr2.reset();
-                usart.cr3.reset();
-
-                usart.cr2.write(|w| unsafe {
-                    w.stop()
-                        .bits(config.stopbits.bits())
-                        .swap()
-                        .bit(config.swap)
-                });
-
-                if let Some(timeout) = config.receiver_timeout {
-                    usart.cr1_enabled().write(|w| w.rtoie().set_bit());
-                    usart.cr2.modify(|_, w| w.rtoen().set_bit());
-                    usart.rtor.write(|w| unsafe { w.rto().bits(timeout) });
-                }
-
-                usart.cr3.write(|w| unsafe {
-                    w.txftcfg()
-                        .bits(config.tx_fifo_threshold.bits())
-                        .rxftcfg()
-                        .bits(config.rx_fifo_threshold.bits())
-                        .txftie()
-                        .bit(config.tx_fifo_interrupt)
-                        .rxftie()
-                        .bit(config.rx_fifo_interrupt)
-                });
-
-                usart.cr1_enabled().modify(|_, w| {
-                    w.ue()
-                        .set_bit()
-                        .te()
-                        .set_bit()
-                        .re()
-                        .set_bit()
-                        .m0()
-                        .bit(config.wordlength == WordLength::DataBits7)
-                        .m1()
-                        .bit(config.wordlength == WordLength::DataBits9)
-                        .pce()
-                        .bit(config.parity != Parity::ParityNone)
-                        .ps()
-                        .bit(config.parity == Parity::ParityOdd)
-                        .fifoen()
-                        .bit(config.fifo_enable)
-                });
-
-                usart.cr3.write(|w| w.dem().bit(PINS::DRIVER_ENABLE));
-
-                // Enable pins
-                pins.setup();
-
-                Ok(Serial {
-                    tx: Tx {
-                        _usart: PhantomData,
-                    },
-                    rx: Rx {
-                        _usart: PhantomData,
-                    },
-                    usart,
-                })
-            }
-
-            /// Starts listening for an interrupt event
-            pub fn listen(&mut self, event: Event) {
-                match event {
-                    Event::Rxne => self
-                        .usart
-                        .cr1_disabled()
-                        .modify(|_, w| w.rxneie().set_bit()),
-                    Event::Txe => self.usart.cr1_disabled().modify(|_, w| w.txeie().set_bit()),
-                    Event::Idle => self
-                        .usart
-                        .cr1_disabled()
-                        .modify(|_, w| w.idleie().set_bit()),
-                    _ => {}
-                }
-            }
-
-            /// Stop listening for an interrupt event
-            pub fn unlisten(&mut self, event: Event) {
-                match event {
-                    Event::Rxne => self
-                        .usart
-                        .cr1_disabled()
-                        .modify(|_, w| w.rxneie().clear_bit()),
-                    Event::Txe => self
-                        .usart
-                        .cr1_disabled()
-                        .modify(|_, w| w.txeie().clear_bit()),
-                    Event::Idle => self
-                        .usart
-                        .cr1_disabled()
-                        .modify(|_, w| w.idleie().clear_bit()),
-                    _ => {}
-                }
-            }
-
-            /// Check if interrupt event is pending
-            pub fn is_pending(&mut self, event: Event) -> bool {
-                (self.usart.isr_enabled().read().bits() & event.val()) != 0
-            }
-
-            /// Clear pending interrupt
-            pub fn unpend(&mut self, event: Event) {
-                // mask the allowed bits
-                let mask: u32 = 0x123BFF;
-                self.usart
-                    .icr
-                    .write(|w| unsafe { w.bits(event.val() & mask) });
-            }
-        }
-
-        impl Tx<$USARTX> {
-            /// Returns true if the tx fifo threshold has been reached.
-            pub fn fifo_threshold_reached(&self) -> bool {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr_enabled().read().txft().bit_is_set()
-            }
-        }
-
-        impl Rx<$USARTX> {
-            /// Check if receiver timeout has lapsed
-            /// Returns the current state of the ISR RTOF bit
-            pub fn timeout_lapsed(&self) -> bool {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr_enabled().read().rtof().bit_is_set()
-            }
-
-            /// Clear pending receiver timeout interrupt
-            pub fn clear_timeout(&mut self) {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.icr.write(|w| w.rtocf().set_bit());
-            }
-
-            /// Returns true if the rx fifo threshold has been reached.
-            pub fn fifo_threshold_reached(&self) -> bool {
-                let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.isr_enabled().read().rxft().bit_is_set()
-            }
-        }
-    };
+    fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
+        self.tx.write(byte)
+    }
 }
 
-uart_shared!(USART1, USART1_RX, USART1_TX,
-    tx: [
-        (PA0, AltFunction::AF4),
-        (PA9, AltFunction::AF1),
-        (PB6, AltFunction::AF0),
-        (PC14, AltFunction::AF0),
-    ],
-    rx: [
-        (PA1, AltFunction::AF4),
-        (PA8, AltFunction::AF14),
-        (PA10, AltFunction::AF1),
-        (PB2, AltFunction::AF0),
-        (PB7, AltFunction::AF0),
-    ],
-    de: [
-        (PA12, AltFunction::AF1),
-        (PA14, AltFunction::AF12),
-        (PA15, AltFunction::AF4),
-        (PB3, AltFunction::AF4),
-        (PB6, AltFunction::AF4),
-    ]
-);
+impl<USART: Instance> Serial<USART> {
+    /// Separates the serial struct into separate channel objects for sending (Tx) and
+    /// receiving (Rx)
+    pub fn split(self) -> (Tx<USART>, Rx<USART>) {
+        (self.tx, self.rx)
+    }
+}
 
-uart_shared!(USART2, USART2_RX, USART2_TX,
-    tx: [
-        (PA2, AltFunction::AF1),
-        (PA4, AltFunction::AF1),
-        (PA8, AltFunction::AF1),
-        (PA14, AltFunction::AF1),
-    ],
-    rx: [
-        (PA3, AltFunction::AF1),
-        (PA5, AltFunction::AF1),
-        (PA13, AltFunction::AF4),
-        (PA14, AltFunction::AF9),
-        (PA15, AltFunction::AF1),
-    ],
-    de: [
-        (PA1, AltFunction::AF1),
-        (PB9, AltFunction::AF1),
-        (PC14, AltFunction::AF9),
-    ]
-);
+impl<USART: Instance> Serial<USART> {
+    pub fn new(
+        usart: USART,
+        pins: (
+            impl Into<USART::Tx<PushPull>>,
+            impl Into<USART::Rx<PushPull>>,
+        ),
+        config: serial::Config,
+        rcc: &mut Rcc,
+    ) -> Result<Self, InvalidConfig> {
+        Self::_new(usart, pins, None, config, rcc)
+    }
+    fn rs485(
+        usart: USART,
+        pins: (
+            impl Into<USART::Tx<PushPull>>,
+            impl Into<USART::Rx<PushPull>>,
+            impl Into<USART::De>,
+        ),
+        config: serial::Config,
+        rcc: &mut Rcc,
+    ) -> Result<Self, InvalidConfig> {
+        Self::_new(usart, (pins.0, pins.1), Some(pins.2), config, rcc)
+    }
+    fn _new(
+        usart: USART,
+        pins: (
+            impl Into<USART::Tx<PushPull>>,
+            impl Into<USART::Rx<PushPull>>,
+        ),
+        depin: Option<impl Into<USART::De>>,
+        config: serial::Config,
+        rcc: &mut Rcc,
+    ) -> Result<Self, InvalidConfig> {
+        // Enable clock for USART
+        USART::enable(rcc);
 
-uart!(USART1, usart1, 1);
-uart!(USART2, usart2, 1);
+        let clk = rcc.clocks.apb_clk.raw() as u64;
+        let bdr = config.baudrate.0 as u64;
+        let clk_mul = 1;
+        let div = (clk_mul * clk) / bdr;
+        usart.brr.write(|w| unsafe { w.bits(div as u32) });
+
+        // usart.cr1.reset();
+        usart.cr2.reset();
+        usart.cr3.reset();
+
+        usart.cr2.write(|w| unsafe {
+            w.stop().bits(config.stopbits.bits());
+            w.swap().bit(config.swap)
+        });
+
+        if let Some(timeout) = config.receiver_timeout {
+            usart.cr1_enabled().write(|w| w.rtoie().set_bit());
+            usart.cr2.modify(|_, w| w.rtoen().set_bit());
+            usart.rtor.write(|w| unsafe { w.rto().bits(timeout) });
+        }
+
+        usart.cr3.write(|w| unsafe {
+            w.txftcfg().bits(config.tx_fifo_threshold.bits());
+            w.rxftcfg().bits(config.rx_fifo_threshold.bits());
+            w.txftie().bit(config.tx_fifo_interrupt);
+            w.rxftie().bit(config.rx_fifo_interrupt)
+        });
+
+        usart.cr1_enabled().modify(|_, w| {
+            w.ue().set_bit();
+            w.te().set_bit();
+            w.re().set_bit();
+            w.m0().bit(config.wordlength == WordLength::DataBits7);
+            w.m1().bit(config.wordlength == WordLength::DataBits9);
+            w.pce().bit(config.parity != Parity::ParityNone);
+            w.ps().bit(config.parity == Parity::ParityOdd);
+            w.fifoen().bit(config.fifo_enable)
+        });
+
+        usart.cr3.write(|w| w.dem().bit(depin.is_some()));
+
+        Ok(Serial {
+            tx: Tx {
+                _usart: PhantomData,
+                pin: pins.0.into(),
+            },
+            rx: Rx {
+                _usart: PhantomData,
+                pin: pins.1.into(),
+            },
+            usart,
+            depin: depin.map(Into::into),
+        })
+    }
+
+    /// Starts listening for an interrupt event
+    pub fn listen(&mut self, event: Event) {
+        match event {
+            Event::Rxne => self
+                .usart
+                .cr1_disabled()
+                .modify(|_, w| w.rxneie().set_bit()),
+            Event::Txe => self.usart.cr1_disabled().modify(|_, w| w.txeie().set_bit()),
+            Event::Idle => self
+                .usart
+                .cr1_disabled()
+                .modify(|_, w| w.idleie().set_bit()),
+            _ => {}
+        }
+    }
+
+    /// Stop listening for an interrupt event
+    pub fn unlisten(&mut self, event: Event) {
+        match event {
+            Event::Rxne => self
+                .usart
+                .cr1_disabled()
+                .modify(|_, w| w.rxneie().clear_bit()),
+            Event::Txe => self
+                .usart
+                .cr1_disabled()
+                .modify(|_, w| w.txeie().clear_bit()),
+            Event::Idle => self
+                .usart
+                .cr1_disabled()
+                .modify(|_, w| w.idleie().clear_bit()),
+            _ => {}
+        }
+    }
+
+    /// Check if interrupt event is pending
+    pub fn is_pending(&mut self, event: Event) -> bool {
+        (self.usart.isr_enabled().read().bits() & event.val()) != 0
+    }
+
+    /// Clear pending interrupt
+    pub fn unpend(&mut self, event: Event) {
+        // mask the allowed bits
+        let mask: u32 = 0x123BFF;
+        self.usart
+            .icr
+            .write(|w| unsafe { w.bits(event.val() & mask) });
+    }
+}
+
+impl<USART: Instance> Tx<USART> {
+    /// Returns true if the tx fifo threshold has been reached.
+    pub fn fifo_threshold_reached(&self) -> bool {
+        let usart = unsafe { &(*USART::ptr()) };
+        usart.isr_enabled().read().txft().bit_is_set()
+    }
+}
+
+impl<USART: Instance> Rx<USART> {
+    /// Check if receiver timeout has lapsed
+    /// Returns the current state of the ISR RTOF bit
+    pub fn timeout_lapsed(&self) -> bool {
+        let usart = unsafe { &(*USART::ptr()) };
+        usart.isr_enabled().read().rtof().bit_is_set()
+    }
+
+    /// Clear pending receiver timeout interrupt
+    pub fn clear_timeout(&mut self) {
+        let usart = unsafe { &(*USART::ptr()) };
+        usart.icr.write(|w| w.rtocf().set_bit());
+    }
+
+    /// Returns true if the rx fifo threshold has been reached.
+    pub fn fifo_threshold_reached(&self) -> bool {
+        let usart = unsafe { &(*USART::ptr()) };
+        usart.isr_enabled().read().rxft().bit_is_set()
+    }
+}
