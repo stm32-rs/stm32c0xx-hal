@@ -4,11 +4,15 @@ pub mod blocking;
 #[cfg(feature = "i2c-nonblocking")]
 pub mod nonblocking;
 
+use core::ops::Deref;
+
 #[cfg(feature = "i2c-nonblocking")]
 pub use nonblocking::*;
 
 pub mod config;
 
+use crate::gpio;
+use crate::pac::{self, i2c as i2c1};
 use crate::rcc::*;
 pub use config::Config;
 
@@ -53,44 +57,48 @@ pub enum Error {
     IncorrectFrameSize(usize),
 }
 
-/// I2C SDA pin
-pub trait SDAPin<I2C> {
-    fn setup(&self);
-    fn release(self) -> Self;
+pub trait Instance:
+    crate::Sealed + Deref<Target = i2c1::RegisterBlock> + Enable + Reset + gpio::alt::I2cCommon
+{
+    #[doc(hidden)]
+    fn ptr() -> *const i2c1::RegisterBlock;
 }
 
-/// I2C SCL pin
-pub trait SCLPin<I2C> {
-    fn setup(&self);
-    fn release(self) -> Self;
+// Implemented by all I2C instances
+macro_rules! i2c {
+    ($I2C:ty: $I2c:ident) => {
+        pub type $I2c = I2c<$I2C>;
+
+        impl Instance for $I2C {
+            fn ptr() -> *const i2c1::RegisterBlock {
+                <$I2C>::ptr() as *const _
+            }
+        }
+    };
 }
 
-pub trait I2cExt<I2C> {
+i2c! { pac::I2C: I2c1 }
+
+pub trait I2cExt: Sized + Instance {
     fn i2c<SDA, SCL>(
         self,
-        sda: SDA,
-        scl: SCL,
+        pins: (impl Into<Self::Scl>, impl Into<Self::Sda>),
         config: impl Into<Config>,
         rcc: &mut Rcc,
-    ) -> I2c<I2C, SDA, SCL>
-    where
-        SDA: SDAPin<I2C>,
-        SCL: SCLPin<I2C>;
+    ) -> I2c<Self>;
 }
 
 /// I2C abstraction
 #[cfg(feature = "i2c-blocking")]
-pub struct I2c<I2C, SDA, SCL> {
+pub struct I2c<I2C: Instance> {
     i2c: I2C,
-    sda: SDA,
-    scl: SCL,
+    pins: (I2C::Scl, I2C::Sda),
 }
 
 #[cfg(feature = "i2c-nonblocking")]
-pub struct I2c<I2C, SDA, SCL> {
+pub struct I2c<I2C: Instance> {
     i2c: I2C,
-    sda: SDA,
-    scl: SCL,
+    pins: (I2C::Scl, I2C::Sda),
     address: u16,
     watchdog: u16, // on each start set to 10, on each stop set to 0
     index: usize,
