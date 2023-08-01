@@ -396,6 +396,103 @@ pub mod tim1 {
     }
 }
 
+pub mod tim3 {
+    use super::*;
+
+    pin! {
+        <Ch1> default:PushPull for [
+            PA6<1>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PB4<1>,
+
+            PB6<12>,
+
+            PB7<11>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PB8<3>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PC6<1>,
+        ],
+
+        <Ch2> default:PushPull for [
+            PA7<1>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PB3<3>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PB5<1>,
+
+            PB6<13>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PB9<3>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PC7<1>,
+
+            PC14<11>,
+        ],
+
+        <Ch3> default:PushPull for [
+            PA8<11>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PB0<1>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PB5<3>,
+
+            PB6<3>,
+
+            PC15<3>,
+        ],
+
+        <Ch4> default:PushPull for [
+            PA8<12>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PB1<1>,
+
+            PB7<3>,
+        ],
+    }
+
+    pin! {
+        <Etr, PushPull> for [
+            PA2<3>,
+
+            PA9<3>,
+
+            PA13<3>,
+
+            #[cfg(feature = "gpio-c0xx_453")]
+            PD2<1>,
+        ],
+
+    }
+
+    use crate::pac::TIM3 as TIM;
+    impl TimCPin<0> for TIM {
+        type Ch<Otype> = Ch1<Otype>;
+    }
+    impl TimCPin<1> for TIM {
+        type Ch<Otype> = Ch2<Otype>;
+    }
+    impl TimCPin<2> for TIM {
+        type Ch<Otype> = Ch3<Otype>;
+    }
+    impl TimCPin<3> for TIM {
+        type Ch<Otype> = Ch4<Otype>;
+    }
+    impl TimEtr for TIM {
+        type Etr = Etr;
+    }
+}
+
 pub mod tim14 {
     use super::*;
 
@@ -515,103 +612,6 @@ pub mod tim17 {
     }
     impl TimBkin for TIM {
         type Bkin = Bkin;
-    }
-}
-
-pub mod tim3 {
-    use super::*;
-
-    pin! {
-        <Ch1> default:PushPull for [
-            PA6<1>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PB4<1>,
-
-            PB6<12>,
-
-            PB7<11>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PB8<3>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PC6<1>,
-        ],
-
-        <Ch2> default:PushPull for [
-            PA7<1>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PB3<3>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PB5<1>,
-
-            PB6<13>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PB9<3>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PC7<1>,
-
-            PC14<11>,
-        ],
-
-        <Ch3> default:PushPull for [
-            PA8<11>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PB0<1>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PB5<3>,
-
-            PB6<3>,
-
-            PC15<3>,
-        ],
-
-        <Ch4> default:PushPull for [
-            PA8<12>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PB1<1>,
-
-            PB7<3>,
-        ],
-    }
-
-    pin! {
-        <Etr, PushPull> for [
-            PA2<3>,
-
-            PA9<3>,
-
-            PA13<3>,
-
-            #[cfg(feature = "gpio-c0xx_453")]
-            PD2<1>,
-        ],
-
-    }
-
-    use crate::pac::TIM3 as TIM;
-    impl TimCPin<0> for TIM {
-        type Ch<Otype> = Ch1<Otype>;
-    }
-    impl TimCPin<1> for TIM {
-        type Ch<Otype> = Ch2<Otype>;
-    }
-    impl TimCPin<2> for TIM {
-        type Ch<Otype> = Ch3<Otype>;
-    }
-    impl TimCPin<3> for TIM {
-        type Ch<Otype> = Ch4<Otype>;
-    }
-    impl TimEtr for TIM {
-        type Etr = Etr;
     }
 }
 

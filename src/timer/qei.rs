@@ -1,110 +1,137 @@
 //! Quadrature Encoder Interface
-use crate::hal::{self, Direction};
-use crate::rcc::*;
+use crate::gpio::{alt::TimCPin as CPin, PushPull};
+use crate::pac;
+use crate::rcc::{self, Rcc};
 
-use crate::timer::pins::TimerPin;
-use crate::timer::*;
+pub trait QeiExt: Sized + Instance {
+    fn qei(
+        self,
+        pins: (
+            impl Into<<Self as CPin<0>>::Ch<PushPull>>,
+            impl Into<<Self as CPin<1>>::Ch<PushPull>>,
+        ),
+        rcc: &mut Rcc,
+    ) -> Qei<Self>;
+}
 
-pub struct Qei<TIM, PINS> {
+impl<TIM: Instance> QeiExt for TIM {
+    fn qei(
+        self,
+        pins: (
+            impl Into<<Self as CPin<0>>::Ch<PushPull>>,
+            impl Into<<Self as CPin<1>>::Ch<PushPull>>,
+        ),
+        rcc: &mut Rcc,
+    ) -> Qei<Self> {
+        Qei::new(self, pins, rcc)
+    }
+}
+
+/// Hardware quadrature encoder interface peripheral
+pub struct Qei<TIM: Instance> {
     tim: TIM,
-    pins: PINS,
+    pins: (
+        <TIM as CPin<0>>::Ch<PushPull>,
+        <TIM as CPin<1>>::Ch<PushPull>,
+    ),
 }
 
-pub trait QeiPins<TIM> {
-    fn setup(&self);
-    fn release(self) -> Self;
-}
+impl<TIM: Instance> Qei<TIM> {
+    /// Configures a TIM peripheral as a quadrature encoder interface input
+    pub fn new(
+        mut tim: TIM,
+        pins: (
+            impl Into<<TIM as CPin<0>>::Ch<PushPull>>,
+            impl Into<<TIM as CPin<1>>::Ch<PushPull>>,
+        ),
+        rcc: &mut Rcc,
+    ) -> Self {
+        // enable and reset peripheral to a clean slate state
+        TIM::enable(rcc);
+        TIM::reset(rcc);
 
-impl<TIM, P1, P2> QeiPins<TIM> for (P1, P2)
-where
-    P1: TimerPin<TIM, Channel = Channel1>,
-    P2: TimerPin<TIM, Channel = Channel2>,
-{
-    fn setup(&self) {
-        self.0.setup();
-        self.1.setup();
+        tim.setup_qei();
+        let pins = (pins.0.into(), pins.1.into());
+        tim.start();
+
+        Qei { tim, pins }
     }
 
-    fn release(self) -> Self {
-        (self.0.release(), self.1.release())
-    }
-}
-
-pub trait QeiExt<TIM, PINS>
-where
-    PINS: QeiPins<TIM>,
-{
-    fn qei(self, pins: PINS, rcc: &mut Rcc) -> Qei<TIM, PINS>;
-}
-
-macro_rules! qei {
-    ($($TIMX:ident: ($tim:ident, $arr:ident, $cnt:ident),)+) => {
-        $(
-            impl<PINS> Qei<$TIMX, PINS> where PINS: QeiPins<$TIMX> {
-                fn $tim(tim: $TIMX, pins: PINS, rcc: &mut Rcc) -> Self {
-                    // enable and reset peripheral to a clean slate state
-                    $TIMX::enable(rcc);
-                    $TIMX::reset(rcc);
-
-                    // Configure TxC1 and TxC2 as captures
-                    tim.ccmr1_output().write(|w| unsafe { w.cc1s().bits(0b01).cc2s().bits(0b01) });
-
-                    // Encoder mode 2.
-                    tim.smcr.write(|w| unsafe { w.sms1().bits(0b010) });
-
-                    // Enable and configure to capture on rising edge
-                    tim.ccer.write(|w| {
-                        w.cc1e()
-                            .set_bit()
-                            .cc2e()
-                            .set_bit()
-                            .cc1p()
-                            .clear_bit()
-                            .cc2p()
-                            .clear_bit()
-                            .cc1np()
-                            .clear_bit()
-                            .cc2np()
-                            .clear_bit()
-                    });
-
-                    pins.setup();
-
-                    tim.cr1.write(|w| w.cen().set_bit());
-                    Qei { tim, pins }
-                }
-
-                pub fn release(self) -> ($TIMX, PINS) {
-                    (self.tim, self.pins.release())
-                }
-            }
-
-            impl<PINS> hal::Qei for Qei<$TIMX, PINS> {
-                type Count = u16;
-
-                fn count(&self) -> u16 {
-                    self.tim.cnt.read().$cnt().bits()
-                }
-
-                fn direction(&self) -> Direction {
-                    if self.tim.cr1.read().dir().bit_is_clear() {
-                        hal::Direction::Upcounting
-                    } else {
-                        hal::Direction::Downcounting
-                    }
-                }
-            }
-
-            impl<PINS> QeiExt<$TIMX, PINS> for $TIMX where PINS: QeiPins<$TIMX> {
-                fn qei(self, pins: PINS, rcc: &mut Rcc) -> Qei<$TIMX, PINS> {
-                    Qei::$tim(self, pins, rcc)
-                }
-            }
-        )+
+    /// Releases the TIM peripheral and QEI pins
+    #[allow(clippy::type_complexity)]
+    pub fn release(
+        self,
+    ) -> (
+        TIM,
+        (
+            <TIM as CPin<0>>::Ch<PushPull>,
+            <TIM as CPin<1>>::Ch<PushPull>,
+        ),
+    ) {
+        (self.tim, self.pins)
     }
 }
 
-qei! {
-    TIM1: (tim1, arr, cnt),
-    TIM3: (tim3, arr, cnt),
+impl<TIM: Instance> embedded_hal::Qei for Qei<TIM> {
+    type Count = u16;
+
+    fn count(&self) -> u16 {
+        self.tim.read_count()
+    }
+
+    fn direction(&self) -> embedded_hal::Direction {
+        if self.tim.read_direction() {
+            embedded_hal::Direction::Upcounting
+        } else {
+            embedded_hal::Direction::Downcounting
+        }
+    }
 }
+
+pub trait Instance: crate::Sealed + rcc::Enable + rcc::Reset + CPin<0> + CPin<1> {
+    fn setup_qei(&mut self);
+    fn start(&mut self);
+    fn read_direction(&self) -> bool;
+}
+
+macro_rules! hal {
+    ($TIM:ty) => {
+        impl Instance for $TIM {
+            fn setup_qei(&mut self) {
+                // Configure TxC1 and TxC2 as captures
+                self.ccmr1_output()
+                    .write(|w| unsafe { w.cc1s().bits(0b01).cc2s().bits(0b01) });
+
+                // Encoder mode 2.
+                self.smcr.write(|w| unsafe { w.sms1().bits(0b010) });
+
+                // Enable and configure to capture on rising edge
+                self.ccer.write(|w| {
+                    w.cc1e()
+                        .set_bit()
+                        .cc2e()
+                        .set_bit()
+                        .cc1p()
+                        .clear_bit()
+                        .cc2p()
+                        .clear_bit()
+                        .cc1np()
+                        .clear_bit()
+                        .cc2np()
+                        .clear_bit()
+                });
+            }
+
+            fn start(&mut self) {
+                self.cr1.write(|w| w.cen().set_bit());
+            }
+
+            fn read_direction(&self) -> bool {
+                self.cr1.read().dir().bit_is_clear()
+            }
+        }
+    };
+}
+
+hal! { pac::TIM1 }
+hal! { pac::TIM3 }

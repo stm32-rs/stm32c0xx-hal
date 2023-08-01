@@ -140,7 +140,7 @@ impl<SPI: Instance> Spi<SPI> {
     }
 
     pub fn release(self) -> (SPI, (SPI::Sck, SPI::Miso, SPI::Mosi)) {
-        (self.spi, self.pins.release())
+        (self.spi, self.pins)
     }
 }
 

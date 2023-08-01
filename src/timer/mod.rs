@@ -2,7 +2,6 @@
 use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
-use core::marker::PhantomData;
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::SYST;
 use hal::timer::{CountDown, Periodic};
@@ -21,10 +20,14 @@ pub struct Timer<TIM> {
     tim: TIM,
 }
 
-pub struct Channel1;
-pub struct Channel2;
-pub struct Channel3;
-pub struct Channel4;
+#[allow(non_upper_case_globals)]
+pub const Channel1: u8 = 0;
+#[allow(non_upper_case_globals)]
+pub const Channel2: u8 = 1;
+#[allow(non_upper_case_globals)]
+pub const Channel3: u8 = 2;
+#[allow(non_upper_case_globals)]
+pub const Channel4: u8 = 3;
 
 /// System timer
 impl Timer<SYST> {

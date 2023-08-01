@@ -1,5 +1,5 @@
-use core::fmt;
 use core::marker::PhantomData;
+use core::{fmt, ops::Deref};
 
 use crate::gpio::{
     alt::{SerialAsync as CommonPins, SerialRs485 as Rs485},
@@ -72,14 +72,27 @@ impl Event {
     }
 }
 
-impl crate::Sealed for pac::USART1 {}
-impl crate::Sealed for pac::USART2 {}
+impl Instance for pac::USART1 {
+    fn ptr() -> *const pac::usart1::RegisterBlock {
+        pac::USART1::ptr()
+    }
+}
+impl Instance for pac::USART2 {
+    fn ptr() -> *const pac::usart1::RegisterBlock {
+        pac::USART2::ptr()
+    }
+}
 
-pub trait Instance: crate::Sealed + rcc::Enable + rcc::Reset + CommonPins + Rs485 {
-    type RegisterBlock;
-
+pub trait Instance:
+    crate::Sealed
+    + rcc::Enable
+    + rcc::Reset
+    + CommonPins
+    + Rs485
+    + Deref<Target = pac::usart1::RegisterBlock>
+{
     #[doc(hidden)]
-    fn ptr() -> *const Self::RegisterBlock;
+    fn ptr() -> *const pac::usart1::RegisterBlock;
 }
 
 /// Serial receiver
@@ -149,7 +162,7 @@ impl<USART: Instance> SerialExt for USART {
     }
 }
 
-impl<USART> fmt::Write for Serial<USART>
+impl<USART: Instance> fmt::Write for Serial<USART>
 where
     Serial<USART>: hal::serial::Write<u8>,
 {
@@ -159,7 +172,7 @@ where
     }
 }
 
-impl<USART> fmt::Write for Tx<USART>
+impl<USART: Instance> fmt::Write for Tx<USART>
 where
     Tx<USART>: hal::serial::Write<u8>,
 {

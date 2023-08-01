@@ -1,8 +1,9 @@
 //! # One-pulse Mode
+use crate::gpio::alt::TimCPin;
+use crate::gpio::PushPull;
 use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::{Hertz, MicroSecond};
-use crate::timer::pins::TimerPin;
 use crate::timer::*;
 use core::marker::PhantomData;
 use fugit::RateExtU32;
@@ -11,9 +12,8 @@ pub trait OpmExt: Sized {
     fn opm(self, period: MicroSecond, rcc: &mut Rcc) -> Opm<Self>;
 }
 
-pub struct OpmPin<TIM, CH> {
+pub struct OpmPin<TIM, const CH: u8> {
     tim: PhantomData<TIM>,
-    channel: PhantomData<CH>,
     delay: u32,
 }
 
@@ -23,14 +23,13 @@ pub struct Opm<TIM> {
 }
 
 impl<TIM> Opm<TIM> {
-    pub fn bind_pin<PIN>(&self, pin: PIN) -> OpmPin<TIM, PIN::Channel>
+    pub fn bind_pin<const C: u8, PIN>(&self, pin: impl Into<PIN>) -> OpmPin<TIM, C>
     where
-        PIN: TimerPin<TIM>,
+        TIM: TimCPin<C, Ch<PushPull> = PIN>,
     {
-        pin.setup();
+        let _ = pin.into();
         OpmPin {
             tim: PhantomData,
-            channel: PhantomData,
             delay: 1,
         }
     }
