@@ -99,7 +99,7 @@ macro_rules! flush_rxdr {
 }
 
 impl<I2C: Instance> I2cExt for I2C {
-    fn i2c<SDA, SCL>(
+    fn i2c(
         self,
         pins: (impl Into<Self::Scl>, impl Into<Self::Sda>),
         config: impl Into<Config>,

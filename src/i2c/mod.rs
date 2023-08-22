@@ -80,7 +80,7 @@ macro_rules! i2c {
 i2c! { pac::I2C: I2c1 }
 
 pub trait I2cExt: Sized + Instance {
-    fn i2c<SDA, SCL>(
+    fn i2c(
         self,
         pins: (impl Into<Self::Scl>, impl Into<Self::Sda>),
         config: impl Into<Config>,

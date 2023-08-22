@@ -109,7 +109,7 @@ macro_rules! busy_wait {
 }
 
 impl<I2C: Instance> I2cExt for I2C {
-    fn i2c<SDA, SCL>(
+    fn i2c(
         self,
         pins: (impl Into<Self::Scl>, impl Into<Self::Sda>),
         config: impl Into<Config>,
@@ -191,7 +191,7 @@ impl<I2C: Instance> I2c<I2C> {
         }
     }
 
-    pub fn release(self) -> (I2C, (I2C::Sda, I2C::Scl)) {
+    pub fn release(self) -> (I2C, (I2C::Scl, I2C::Sda)) {
         (self.i2c, self.pins)
     }
 }

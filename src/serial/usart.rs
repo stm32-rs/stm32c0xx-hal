@@ -98,13 +98,13 @@ pub trait Instance:
 /// Serial receiver
 pub struct Rx<USART: Instance> {
     _usart: PhantomData<USART>,
-    pin: USART::Rx<PushPull>,
+    _pin: USART::Rx<PushPull>,
 }
 
 /// Serial transmitter
 pub struct Tx<USART: Instance> {
     _usart: PhantomData<USART>,
-    pin: USART::Tx<PushPull>,
+    _pin: USART::Tx<PushPull>,
 }
 
 /// Serial abstraction
@@ -112,7 +112,7 @@ pub struct Serial<USART: Instance> {
     tx: Tx<USART>,
     rx: Rx<USART>,
     usart: USART,
-    depin: Option<USART::De>,
+    _depin: Option<USART::De>,
 }
 
 /// A filler type for when the Tx pin is unnecessary
@@ -309,7 +309,7 @@ impl<USART: Instance> Serial<USART> {
         config: serial::Config,
         rcc: &mut Rcc,
     ) -> Result<Self, InvalidConfig> {
-        Self::_new(usart, pins, None, config, rcc)
+        Self::_new(usart, pins, Option::<USART::De>::None, config, rcc)
     }
     fn rs485(
         usart: USART,
@@ -380,14 +380,14 @@ impl<USART: Instance> Serial<USART> {
         Ok(Serial {
             tx: Tx {
                 _usart: PhantomData,
-                pin: pins.0.into(),
+                _pin: pins.0.into(),
             },
             rx: Rx {
                 _usart: PhantomData,
-                pin: pins.1.into(),
+                _pin: pins.1.into(),
             },
             usart,
-            depin: depin.map(Into::into),
+            _depin: depin.map(Into::into),
         })
     }
 

@@ -72,22 +72,6 @@ impl<TIM: Instance> Qei<TIM> {
     }
 }
 
-impl<TIM: Instance> embedded_hal::Qei for Qei<TIM> {
-    type Count = u16;
-
-    fn count(&self) -> u16 {
-        self.tim.read_count()
-    }
-
-    fn direction(&self) -> embedded_hal::Direction {
-        if self.tim.read_direction() {
-            embedded_hal::Direction::Upcounting
-        } else {
-            embedded_hal::Direction::Downcounting
-        }
-    }
-}
-
 pub trait Instance: crate::Sealed + rcc::Enable + rcc::Reset + CPin<0> + CPin<1> {
     fn setup_qei(&mut self);
     fn start(&mut self);
@@ -96,6 +80,22 @@ pub trait Instance: crate::Sealed + rcc::Enable + rcc::Reset + CPin<0> + CPin<1>
 
 macro_rules! hal {
     ($TIM:ty) => {
+        impl embedded_hal::Qei for Qei<$TIM> {
+            type Count = u16;
+
+            fn count(&self) -> u16 {
+                self.tim.cnt.read().bits() as u16
+            }
+
+            fn direction(&self) -> embedded_hal::Direction {
+                if self.tim.read_direction() {
+                    embedded_hal::Direction::Upcounting
+                } else {
+                    embedded_hal::Direction::Downcounting
+                }
+            }
+        }
+
         impl Instance for $TIM {
             fn setup_qei(&mut self) {
                 // Configure TxC1 and TxC2 as captures
@@ -107,18 +107,12 @@ macro_rules! hal {
 
                 // Enable and configure to capture on rising edge
                 self.ccer.write(|w| {
-                    w.cc1e()
-                        .set_bit()
-                        .cc2e()
-                        .set_bit()
-                        .cc1p()
-                        .clear_bit()
-                        .cc2p()
-                        .clear_bit()
-                        .cc1np()
-                        .clear_bit()
-                        .cc2np()
-                        .clear_bit()
+                    w.cc1e().set_bit();
+                    w.cc2e().set_bit();
+                    w.cc1p().clear_bit();
+                    w.cc2p().clear_bit();
+                    w.cc1np().clear_bit();
+                    w.cc2np().clear_bit()
                 });
             }
 

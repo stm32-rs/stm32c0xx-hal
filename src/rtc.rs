@@ -125,20 +125,13 @@ impl Rtc {
 
         self.modify(|rb| {
             rb.dr.write(|w| unsafe {
-                w.dt()
-                    .bits(dt)
-                    .du()
-                    .bits(du)
-                    .mt()
-                    .bit(mt > 0)
-                    .mu()
-                    .bits(mu)
-                    .yt()
-                    .bits(yt)
-                    .yu()
-                    .bits(yu)
-                    .wdu()
-                    .bits(date.day as u8)
+                w.dt().bits(dt);
+                w.du().bits(du);
+                w.mt().bit(mt > 0);
+                w.mu().bits(mu);
+                w.yt().bits(yt);
+                w.yu().bits(yu);
+                w.wdu().bits(date.day as u8)
             });
         });
     }
@@ -149,20 +142,13 @@ impl Rtc {
         let (st, su) = bcd2_encode(time.seconds);
         self.modify(|rb| {
             rb.tr.write(|w| unsafe {
-                w.ht()
-                    .bits(ht)
-                    .hu()
-                    .bits(hu)
-                    .mnt()
-                    .bits(mnt)
-                    .mnu()
-                    .bits(mnu)
-                    .st()
-                    .bits(st)
-                    .su()
-                    .bits(su)
-                    .pm()
-                    .clear_bit()
+                w.ht().bits(ht);
+                w.hu().bits(hu);
+                w.mnt().bits(mnt);
+                w.mnu().bits(mnu);
+                w.st().bits(st);
+                w.su().bits(su);
+                w.pm().clear_bit()
             });
             rb.cr.modify(|_, w| w.fmt().bit(time.daylight_savings));
         });
@@ -200,10 +186,8 @@ impl Rtc {
 
         self.modify(|rb| {
             rb.alrmassr.write(|w| unsafe {
-                w.maskss()
-                    .bits(alarm.subseconds_mask_bits)
-                    .ss()
-                    .bits(alarm.subseconds)
+                w.maskss().bits(alarm.subseconds_mask_bits);
+                w.ss().bits(alarm.subseconds)
             });
             rb.alrmar.write(|w| unsafe {
                 w.wdsel().bit(alarm.use_weekday);
@@ -233,10 +217,8 @@ impl Rtc {
 
         // self.modify(|rb| {
         //     rb.alrmbssr.write(|w| unsafe {
-        //         w.maskss()
-        //             .bits(alarm.subseconds_mask_bits)
-        //             .ss()
-        //             .bits(alarm.subseconds)
+        //         w.maskss().bits(alarm.subseconds_mask_bits);
+        //         w.ss().bits(alarm.subseconds)
         //     });
         //     rb.alrmbr.write(|w| unsafe {
         //         w.wdsel().bit(alarm.use_weekday);
@@ -304,17 +286,14 @@ impl Rtc {
         pin: PIN,
         freq: RtcCalibrationFrequency,
     ) {
-        pin.setup();
+        let channel = pin.channel();
+        let _pin = pin.setup();
         self.modify(|rb| {
             rb.cr.modify(|_, w| unsafe {
-                w.osel()
-                    .bits(0b0)
-                    .out2en()
-                    .bit(pin.channel())
-                    .cosel()
-                    .bit(freq == RtcCalibrationFrequency::F1Hz)
-                    .coe()
-                    .set_bit()
+                w.osel().bits(0b0);
+                w.out2en().bit(channel);
+                w.cosel().bit(freq == RtcCalibrationFrequency::F1Hz);
+                w.coe().set_bit()
             });
         });
         todo!();
@@ -354,25 +333,27 @@ impl RtcExt for RTC {
 }
 
 pub trait RtcOutputPin {
-    fn setup(&self);
+    type AFPin;
+    fn setup(self) -> Self::AFPin;
     fn channel(&self) -> bool;
-    fn release(self) -> Self;
+    fn release(pin: Self::AFPin) -> Self;
 }
 
 macro_rules! rtc_out_pins {
-    ($($pin:ty: ($af_mode:expr, $ch:expr),)+) => {
+    ($($pin:ty: ($afpin:ty, $ch:expr),)+) => {
         $(
             impl RtcOutputPin for $pin {
-                fn setup(&self) {
-                    self.set_alt_mode($af_mode);
+                type AFPin = $afpin;
+                fn setup(self) -> Self::AFPin {
+                    self.into_mode()
                 }
 
                 fn channel(&self) -> bool {
                     $ch
                 }
 
-                fn release(self) -> Self {
-                    self.into_analog()
+                fn release(pin: Self::AFPin) -> Self {
+                    pin.into_mode()
                 }
             }
         )+
@@ -380,8 +361,8 @@ macro_rules! rtc_out_pins {
 }
 
 rtc_out_pins! {
-    PA4<DefaultMode>: (AltFunction::AF3, true),
-    PC13<DefaultMode>: (AltFunction::AF3, false),
+    PA4: (PA4<AF3>, true),
+    PC13: (PC13<AF3>, false),
 }
 
 fn bcd2_encode(word: u32) -> (u8, u8) {

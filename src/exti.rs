@@ -27,6 +27,7 @@ pub enum Event {
     LSE_CSS = 31,
 }
 
+#[allow(unused)]
 impl Event {
     pub(crate) fn from_code(n: u8) -> Event {
         match n {
