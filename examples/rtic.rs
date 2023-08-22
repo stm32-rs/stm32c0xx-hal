@@ -55,7 +55,7 @@ mod app {
 
     #[task(binds = TIM17, shared = [timer], local = [led])]
     fn timer_tick(mut ctx: timer_tick::Context) {
-        ctx.local.led.toggle().ok();
+        ctx.local.led.toggle();
         ctx.shared.timer.lock(|tim| tim.clear_irq());
     }
 

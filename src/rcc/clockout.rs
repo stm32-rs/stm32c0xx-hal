@@ -1,11 +1,11 @@
-use crate::gpio::*;
+use crate::gpio::{self, alt::rcc as alt};
 use crate::rcc::*;
 use crate::stm32::RCC;
 
-pub type LscoPin = PA2<DefaultMode>;
+pub type LscoPin = gpio::PA2;
 
 pub struct Lsco {
-    pin: LscoPin,
+    pin: gpio::PA2<gpio::Alternate<0>>,
 }
 
 impl Lsco {
@@ -20,7 +20,7 @@ impl Lsco {
     }
 
     pub fn release(self) -> LscoPin {
-        self.pin.into_analog()
+        self.pin.into_mode()
     }
 }
 
@@ -40,21 +40,18 @@ impl LSCOExt for LscoPin {
                 false
             }
         };
-        self.set_alt_mode(AltFunction::AF0);
+        let pin = self.into_mode();
         rcc.csr1.modify(|_, w| w.lscosel().bit(src_select_bit));
-        Lsco { pin: self }
+        Lsco { pin }
     }
 }
 
-pub struct Mco<PIN> {
-    pin: PIN,
+pub struct Mco {
+    pin: alt::Mco,
     src_bits: u8,
 }
 
-impl<PIN> Mco<PIN>
-where
-    PIN: MCOExt<PIN>,
-{
+impl Mco {
     pub fn enable(&mut self) {
         let rcc = unsafe { &(*RCC::ptr()) };
         rcc.cfgr
@@ -66,66 +63,61 @@ where
         rcc.cfgr.modify(|_, w| unsafe { w.mcosel().bits(0) });
     }
 
-    pub fn release(self) -> PIN {
-        self.pin.release()
+    pub fn release(self) -> alt::Mco {
+        self.pin
     }
 }
 
-pub trait MCOExt<PIN> {
-    fn mco(self, src: MCOSrc, psc: Prescaler, rcc: &mut Rcc) -> Mco<PIN>;
-    fn release(self) -> PIN;
+pub trait MCOExt {
+    fn mco(self, src: MCOSrc, psc: Prescaler, rcc: &mut Rcc) -> Mco;
+    fn release(self) -> Self;
 }
 
-macro_rules! mco {
-    ($($PIN:ty),+) => {
-        $(
-            impl MCOExt<$PIN> for $PIN {
-                fn mco(self, src: MCOSrc, psc: Prescaler, rcc: &mut Rcc) -> Mco<$PIN> {
-                    let psc_bits = match psc {
-                        Prescaler::NotDivided => 0b000,
-                        Prescaler::Div2 => 0b001,
-                        Prescaler::Div4 => 0b010,
-                        Prescaler::Div8 => 0b011,
-                        Prescaler::Div16 => 0b100,
-                        Prescaler::Div32 => 0b101,
-                        Prescaler::Div64 => 0b110,
-                        _ => 0b111,
-                    };
+impl<PIN> MCOExt for PIN
+where
+    PIN: Into<alt::Mco> + TryFrom<alt::Mco>,
+{
+    fn mco(self, src: MCOSrc, psc: Prescaler, rcc: &mut Rcc) -> Mco {
+        let psc_bits = match psc {
+            Prescaler::NotDivided => 0b000,
+            Prescaler::Div2 => 0b001,
+            Prescaler::Div4 => 0b010,
+            Prescaler::Div8 => 0b011,
+            Prescaler::Div16 => 0b100,
+            Prescaler::Div32 => 0b101,
+            Prescaler::Div64 => 0b110,
+            _ => 0b111,
+        };
 
-                    rcc.cfgr.modify(|_, w| unsafe {
-                        w.mcopre().bits(psc_bits)
-                    });
+        rcc.cfgr.modify(|_, w| unsafe { w.mcopre().bits(psc_bits) });
 
-                    let src_bits = match src {
-                        MCOSrc::SysClk => 0b001,
-                        MCOSrc::HSI => {
-                            rcc.enable_hsi();
-                            0b011
-                        },
-                        MCOSrc::HSE => {
-                            rcc.enable_hse(false);
-                            0b100
-                        },
-                        MCOSrc::LSI => {
-                            rcc.enable_lsi();
-                            0b110
-                        },
-                        MCOSrc::LSE => {
-                            rcc.enable_lse(false);
-                            0b111
-                        },
-                    };
-
-                    self.set_alt_mode(AltFunction::AF0);
-                    Mco { src_bits, pin: self }
-                }
-
-                fn release(self) -> $PIN {
-                    self.into_analog()
-                }
+        let src_bits = match src {
+            MCOSrc::SysClk => 0b001,
+            MCOSrc::HSI => {
+                rcc.enable_hsi();
+                0b011
             }
-        )+
-    };
-}
+            MCOSrc::HSE => {
+                rcc.enable_hse(false);
+                0b100
+            }
+            MCOSrc::LSI => {
+                rcc.enable_lsi();
+                0b110
+            }
+            MCOSrc::LSE => {
+                rcc.enable_lse(false);
+                0b111
+            }
+        };
 
-mco!(PA8<DefaultMode>, PA9<DefaultMode>, PF2<DefaultMode>);
+        Mco {
+            src_bits,
+            pin: self.into(),
+        }
+    }
+
+    fn release(self) -> Self {
+        self.try_into().unwrap()
+    }
+}

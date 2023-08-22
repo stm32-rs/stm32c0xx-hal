@@ -25,7 +25,7 @@ fn main() -> ! {
     let mut watchdog = dp.WWDG.constrain(&mut rcc);
     // let mut watchdog = dp.IWDG.constrain();
 
-    led.set_high().ok();
+    led.set_high();
     watchdog.start(20.millis());
 
     loop {}

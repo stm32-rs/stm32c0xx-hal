@@ -24,7 +24,7 @@ fn main() -> ! {
     timer.start(500.millis());
 
     loop {
-        led.toggle().unwrap();
+        led.toggle();
         block!(timer.wait()).unwrap();
     }
 }

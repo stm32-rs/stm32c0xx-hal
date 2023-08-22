@@ -18,7 +18,7 @@ fn main() -> ! {
     let mut led = port_a.pa5.into_push_pull_output();
 
     loop {
-        led.toggle().ok();
+        led.toggle();
         for _ in 0..1_000_000 {
             cortex_m::asm::nop();
         }

@@ -1,10 +1,11 @@
 //! # Pulse Width Modulation
 use core::marker::PhantomData;
 
+use crate::gpio::alt::TimCPin;
+use crate::gpio::PushPull;
 use crate::rcc::*;
 use crate::stm32::*;
 use crate::time::Hertz;
-use crate::timer::pins::TimerPin;
 use crate::timer::*;
 
 pub enum OutputCompareMode {
@@ -29,9 +30,8 @@ pub struct Pwm<TIM> {
     tim: TIM,
 }
 
-pub struct PwmPin<TIM, CH> {
+pub struct PwmPin<TIM, const CH: u8> {
     tim: PhantomData<TIM>,
-    channel: PhantomData<CH>,
 }
 
 pub trait PwmExt: Sized {
@@ -43,15 +43,12 @@ pub trait PwmPinMode {
 }
 
 impl<TIM> Pwm<TIM> {
-    pub fn bind_pin<PIN>(&self, pin: PIN) -> PwmPin<TIM, PIN::Channel>
+    pub fn bind_pin<const C: u8, PIN>(&self, pin: impl Into<PIN>) -> PwmPin<TIM, C>
     where
-        PIN: TimerPin<TIM>,
+        TIM: TimCPin<C, Ch<PushPull> = PIN>,
     {
-        pin.setup();
-        PwmPin {
-            tim: PhantomData,
-            channel: PhantomData,
-        }
+        let _ = pin.into();
+        PwmPin { tim: PhantomData }
     }
 }
 
@@ -140,7 +137,7 @@ macro_rules! pwm_q {
 
 macro_rules! pwm_hal {
     ($($TIMX:ident:
-        ($CH:ty, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident, $ccrx_l:ident, $ccrx_h:ident),)+
+        ($CH:ident, $ccxe:ident, $ccmrx_output:ident, $ocxpe:ident, $ocxm:ident, $ccrx:ident, $ccrx_l:ident, $ccrx_h:ident),)+
     ) => {
         $(
             impl hal::PwmPin for PwmPin<$TIMX, $CH> {
@@ -178,7 +175,7 @@ macro_rules! pwm_hal {
 
 macro_rules! pwm_advanced_hal {
     ($($TIMX:ident: (
-        $CH:ty,
+        $CH:ident,
         $ccxe:ident $(: $ccxne:ident)*,
         $ccmrx_output:ident,
         $ocxpe:ident,

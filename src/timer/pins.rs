@@ -1,10 +1,12 @@
+/*
 use crate::gpio::*;
 use crate::gpio::{AltFunction, DefaultMode};
 use crate::stm32::*;
 use crate::timer::*;
 
 pub trait TimerPin<TIM> {
-    type Channel;
+    #[allow(non_upper_case_globals)]
+    const Channel: u8;
 
     fn setup(&self);
     fn release(self) -> Self;
@@ -28,10 +30,11 @@ impl<TIM, PIN: TimerPin<TIM>> TriggerPin<TIM, PIN> {
 }
 
 macro_rules! timer_pins {
-    ($TIMX:ident, [ $(($ch:ty, $pin:ty, $af_mode:expr),)+ ]) => {
+    ($TIMX:ident, [ $(($ch:ident, $pin:ty, $af_mode:expr),)+ ]) => {
         $(
             impl TimerPin<$TIMX> for $pin {
-                type Channel = $ch;
+                #[allow(non_upper_case_globals)]
+                const Channel: u8 = $ch;
 
                 fn setup(&self) {
                     self.set_alt_mode($af_mode);
@@ -173,3 +176,4 @@ timer_pins!(TIM17, [
 timer_pins!(TIM17, [
     (Channel1, PB7<DefaultMode>, AltFunction::AF2),
 ]);
+*/

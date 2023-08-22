@@ -466,6 +466,9 @@ adc_pin! {
     Channel12: (PA12<Analog>, 12u8),
     Channel13: (PA13<Analog>, 13u8),
     Channel14: (PA14<Analog>, 14u8),
+}
+#[cfg(feature = "gpio-c0xx_453")]
+adc_pin! {
     Channel17: (PB0<Analog>, 17u8),
     Channel18: (PB1<Analog>, 18u8),
     Channel19: (PB2<Analog>, 19u8),
