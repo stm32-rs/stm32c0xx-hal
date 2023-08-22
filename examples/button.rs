@@ -22,10 +22,10 @@ fn main() -> ! {
     let mut led = port_a.pa5.into_push_pull_output();
 
     loop {
-        if button.is_high().unwrap_or_default() {
-            led.set_low().ok();
+        if button.is_high() {
+            led.set_low();
         } else {
-            led.set_high().ok();
+            led.set_high();
         }
     }
 }

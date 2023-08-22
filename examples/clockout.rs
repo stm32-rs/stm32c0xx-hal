@@ -20,11 +20,11 @@ fn main() -> ! {
     let mut rcc = dp.RCC.freeze(Config::hsi(Prescaler::NotDivided));
     let gpioa = dp.GPIOA.split(&mut rcc);
 
-    let mut mco =
-        gpioa
-            .pa9
-            .set_speed(Speed::VeryHigh)
-            .mco(MCOSrc::SysClk, Prescaler::Div2, &mut rcc);
+    let mut mco = gpioa.pa9.into_alternate().speed(Speed::VeryHigh).mco(
+        MCOSrc::SysClk,
+        Prescaler::Div2,
+        &mut rcc,
+    );
     mco.enable();
 
     let mut lsco = gpioa.pa2.lsco(LSCOSrc::LSE, &mut rcc);

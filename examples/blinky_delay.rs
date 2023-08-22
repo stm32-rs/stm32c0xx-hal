@@ -22,6 +22,6 @@ fn main() -> ! {
     let mut delay = dp.TIM3.delay(&mut rcc);
     loop {
         delay.delay(500.millis());
-        led.toggle().ok();
+        led.toggle();
     }
 }

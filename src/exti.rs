@@ -1,5 +1,5 @@
 //! External interrupt controller
-use crate::gpio::SignalEdge;
+use crate::gpio::{Input, Pin, PinExt, PinMode, SignalEdge};
 use crate::stm32::EXTI;
 
 /// EXTI trigger event
@@ -120,5 +120,32 @@ impl ExtiExt for EXTI {
             self.rpr1.modify(|_, w| unsafe { w.bits(1 << line) });
             self.fpr1.modify(|_, w| unsafe { w.bits(1 << line) });
         }
+    }
+}
+
+impl<const P: char, const N: u8, MODE: PinMode> Pin<P, N, MODE> {
+    /// Configures the pin as external trigger
+    pub fn listen(self, edge: SignalEdge, exti: &mut EXTI) -> Pin<P, N, Input> {
+        let pin = self.into_mode();
+        let offset = (N % 4) * 8;
+        let mask = (pin.port_id() as u32) << offset;
+        let reset = !(0xff << offset);
+        match N as u8 {
+            0..=3 => exti
+                .exticr1
+                .modify(|r, w| unsafe { w.bits(r.bits() & reset | mask) }),
+            4..=7 => exti
+                .exticr2
+                .modify(|r, w| unsafe { w.bits(r.bits() & reset | mask) }),
+            8..=11 => exti
+                .exticr3
+                .modify(|r, w| unsafe { w.bits(r.bits() & reset | mask) }),
+            12..=16 => exti
+                .exticr4
+                .modify(|r, w| unsafe { w.bits(r.bits() & reset | mask) }),
+            _ => unreachable!(),
+        }
+        exti.listen(Event::from_code(N), edge);
+        pin
     }
 }
