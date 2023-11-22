@@ -235,7 +235,7 @@ impl Adc {
         let vref = if let Some(vref) = &self.vref {
             *vref
         } else {
-            let vref_cal: u32 = unsafe { ptr::read_volatile(0x1FFF_75AA as *const u16) as u32 };
+            let vref_cal: u32 = unsafe { ptr::read_volatile(0x1FFF_756A as *const u16) as u32 };
 
             let mut vref = VRef::new();
             let vref_val: u32 = if vref.enabled(self) {
@@ -253,7 +253,7 @@ impl Adc {
         };
 
         self.read(pin).map(|raw: u32| {
-            let adc_mv = (vref as u32 * raw) >> 16;
+            let adc_mv = (vref as u32 * raw) >> 12;
             adc_mv as u16
         })
     }
