@@ -106,7 +106,7 @@ pub struct Adc {
     sample_time: SampleTime,
     align: Align,
     precision: Precision,
-    vdda_mv: Option<u32>,
+    vref: Option<u32>,
 }
 
 /// Contains the calibration factors for the ADC which can be reused with [`Adc::set_calibration()`]
@@ -125,7 +125,7 @@ impl Adc {
             sample_time: SampleTime::T_2,
             align: Align::Right,
             precision: Precision::B_12,
-            vdda_mv: None,
+            vref: None,
         }
     }
 
@@ -232,9 +232,11 @@ impl Adc {
         &mut self,
         pin: &mut PIN,
     ) -> nb::Result<u16, ()> {
-        let vdda_mv = if let Some(vdda_mv) = self.vdda_mv {
-            vdda_mv
+        let vref = if let Some(vref) = &self.vref {
+            *vref
         } else {
+            let vref_cal: u32 = unsafe { ptr::read_volatile(0x1FFF_75AA as *const u16) as u32 };
+
             let mut vref = VRef::new();
             let vref_val: u32 = if vref.enabled(self) {
                 self.read(&mut vref)?
@@ -245,20 +247,13 @@ impl Adc {
                 vref_val
             };
 
-            let vref_cal: u32 = unsafe {
-                // DS12766 3.13.2
-                ptr::read_volatile(0x1FFF_75AA as *const u16) as u32
-            };
-
-            // RM0454 14.9 Calculating the actual VDDA voltage using the internal reference voltage
-            // V_DDA = 3 V x VREFINT_CAL / VREFINT_DATA
-            let vdda_mv = vref_cal * 3_000_u32 / vref_val;
-            self.vdda_mv = Some(vdda_mv);
-            vdda_mv
+            let vref = (3_000_u32 * vref_cal) / vref_val;
+            self.vref = Some(vref);
+            vref
         };
 
         self.read(pin).map(|raw: u32| {
-            let adc_mv = (vdda_mv * raw) >> 12;
+            let adc_mv = (vref as u32 * raw) >> 16;
             adc_mv as u16
         })
     }
