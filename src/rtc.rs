@@ -114,7 +114,8 @@ impl Rtc {
 
     pub fn set_hour_format(&mut self, fmt: RtcHourFormat) {
         self.modify(|rb| {
-            rb.cr().modify(|_, w| w.fmt().bit(fmt == RtcHourFormat::H12));
+            rb.cr()
+                .modify(|_, w| w.fmt().bit(fmt == RtcHourFormat::H12));
         });
     }
 
@@ -193,10 +194,10 @@ impl Rtc {
 
     pub fn set_alarm_a(&mut self, alarm: impl Into<Alarm>) {
         let alarm = alarm.into();
-        let (dt, du) = bcd2_encode(alarm.day.unwrap_or_default() as u32);
-        let (ht, hu) = bcd2_encode(alarm.hours.unwrap_or_default() as u32);
-        let (mt, mu) = bcd2_encode(alarm.minutes.unwrap_or_default() as u32);
-        let (st, su) = bcd2_encode(alarm.seconds.unwrap_or_default() as u32);
+        let (dt, du) = bcd2_encode(alarm.day.unwrap_or_default());
+        let (ht, hu) = bcd2_encode(alarm.hours.unwrap_or_default());
+        let (mt, mu) = bcd2_encode(alarm.minutes.unwrap_or_default());
+        let (st, su) = bcd2_encode(alarm.seconds.unwrap_or_default());
 
         self.modify(|rb| {
             rb.alrmassr().write(|w| unsafe {
@@ -391,7 +392,7 @@ fn bcd2_encode(word: u32) -> (u8, u8) {
         bcd_high += 1;
         value -= 10;
     }
-    let bcd_low = ((bcd_high << 4) | value) as u8;
+    let bcd_low = (bcd_high << 4) | value;
     (bcd_high, bcd_low)
 }
 

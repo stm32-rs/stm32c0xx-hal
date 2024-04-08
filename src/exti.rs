@@ -68,14 +68,18 @@ impl ExtiExt for EXTI {
         let mask = 1 << line;
         match edge {
             SignalEdge::Rising => {
-                self.rtsr1().modify(|r, w| unsafe { w.bits(r.bits() | mask) });
+                self.rtsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | mask) });
             }
             SignalEdge::Falling => {
-                self.ftsr1().modify(|r, w| unsafe { w.bits(r.bits() | mask) });
+                self.ftsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | mask) });
             }
             SignalEdge::All => {
-                self.rtsr1().modify(|r, w| unsafe { w.bits(r.bits() | mask) });
-                self.ftsr1().modify(|r, w| unsafe { w.bits(r.bits() | mask) });
+                self.rtsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | mask) });
+                self.ftsr1()
+                    .modify(|r, w| unsafe { w.bits(r.bits() | mask) });
             }
         }
         self.wakeup(ev);
@@ -91,10 +95,13 @@ impl ExtiExt for EXTI {
 
         let line = ev as u8;
         let mask = !(1 << line);
-        self.imr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+        self.imr1()
+            .modify(|r, w| unsafe { w.bits(r.bits() & mask) });
         if line <= TRIGGER_MAX {
-            self.rtsr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
-            self.ftsr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+            self.rtsr1()
+                .modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+            self.ftsr1()
+                .modify(|r, w| unsafe { w.bits(r.bits() & mask) });
         }
     }
 
