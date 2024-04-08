@@ -68,21 +68,21 @@ impl ExtiExt for EXTI {
         let mask = 1 << line;
         match edge {
             SignalEdge::Rising => {
-                self.rtsr1.modify(|r, w| unsafe { w.bits(r.bits() | mask) });
+                self.rtsr1().modify(|r, w| unsafe { w.bits(r.bits() | mask) });
             }
             SignalEdge::Falling => {
-                self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() | mask) });
+                self.ftsr1().modify(|r, w| unsafe { w.bits(r.bits() | mask) });
             }
             SignalEdge::All => {
-                self.rtsr1.modify(|r, w| unsafe { w.bits(r.bits() | mask) });
-                self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() | mask) });
+                self.rtsr1().modify(|r, w| unsafe { w.bits(r.bits() | mask) });
+                self.ftsr1().modify(|r, w| unsafe { w.bits(r.bits() | mask) });
             }
         }
         self.wakeup(ev);
     }
 
     fn wakeup(&self, ev: Event) {
-        self.imr1
+        self.imr1()
             .modify(|r, w| unsafe { w.bits(r.bits() | 1 << ev as u8) });
     }
 
@@ -91,10 +91,10 @@ impl ExtiExt for EXTI {
 
         let line = ev as u8;
         let mask = !(1 << line);
-        self.imr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+        self.imr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
         if line <= TRIGGER_MAX {
-            self.rtsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
-            self.ftsr1.modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+            self.rtsr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
+            self.ftsr1().modify(|r, w| unsafe { w.bits(r.bits() & mask) });
         }
     }
 
@@ -105,10 +105,10 @@ impl ExtiExt for EXTI {
         }
         let mask = 1 << line;
         match edge {
-            SignalEdge::Rising => self.rpr1.read().bits() & mask != 0,
-            SignalEdge::Falling => self.fpr1.read().bits() & mask != 0,
+            SignalEdge::Rising => self.rpr1().read().bits() & mask != 0,
+            SignalEdge::Falling => self.fpr1().read().bits() & mask != 0,
             SignalEdge::All => {
-                (self.rpr1.read().bits() & mask != 0) && (self.fpr1.read().bits() & mask != 0)
+                (self.rpr1().read().bits() & mask != 0) && (self.fpr1().read().bits() & mask != 0)
             }
         }
     }
@@ -116,8 +116,8 @@ impl ExtiExt for EXTI {
     fn unpend(&self, ev: Event) {
         let line = ev as u8;
         if line <= TRIGGER_MAX {
-            self.rpr1.modify(|_, w| unsafe { w.bits(1 << line) });
-            self.fpr1.modify(|_, w| unsafe { w.bits(1 << line) });
+            self.rpr1().modify(|_, w| unsafe { w.bits(1 << line) });
+            self.fpr1().modify(|_, w| unsafe { w.bits(1 << line) });
         }
     }
 }

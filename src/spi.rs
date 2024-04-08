@@ -148,7 +148,7 @@ macro_rules! spi {
                 $SPIX::reset(rcc);
 
                 // disable SS output
-                spi.cr2.write(|w| w.ssoe().clear_bit());
+                spi.cr2().write(|w| w.ssoe().clear_bit());
 
                 let br = match rcc.clocks.apb_clk / speed {
                     0 => unreachable!(),
@@ -162,14 +162,14 @@ macro_rules! spi {
                     _ => 0b111,
                 };
 
-                spi.cr2.write(|w| unsafe {
+                spi.cr2().write(|w| unsafe {
                     w.frxth().set_bit().ds().bits(0b111).ssoe().clear_bit()
                 });
 
                 // Enable pins
                 pins.setup();
 
-                spi.cr1.write(|w| unsafe {
+                spi.cr1().write(|w| unsafe {
                     w.cpha()
                         .bit(mode.phase == Phase::CaptureOnSecondTransition)
                         .cpol()
@@ -198,19 +198,19 @@ macro_rules! spi {
             }
 
             pub fn data_size(&mut self, nr_bits: u8) {
-                self.spi.cr2.modify(|_, w| unsafe {
+                self.spi.cr2().modify(|_, w| unsafe {
                     w.ds().bits(nr_bits-1)
                 });
             }
 
             pub fn half_duplex_enable(&mut self, enable: bool) {
-                self.spi.cr1.modify(|_, w|
+                self.spi.cr1().modify(|_, w|
                     w.bidimode().bit(enable)
                 );
             }
 
             pub fn half_duplex_output_enable(&mut self, enable: bool) {
-                self.spi.cr1.modify(|_, w|
+                self.spi.cr1().modify(|_, w|
                     w.bidioe().bit(enable)
                 );
             }
@@ -233,7 +233,7 @@ macro_rules! spi {
             type Error = Error;
 
             fn read(&mut self) -> nb::Result<u8, Error> {
-                let sr = self.spi.sr.read();
+                let sr = self.spi.sr().read();
 
                 Err(if sr.ovr().bit_is_set() {
                     nb::Error::Other(Error::Overrun)
@@ -245,7 +245,7 @@ macro_rules! spi {
                     // NOTE(read_volatile) read only 1 byte (the svd2rust API only allows
                     // reading a half-word)
                     return Ok(unsafe {
-                        ptr::read_volatile(&self.spi.dr as *const _ as *const u8)
+                        ptr::read_volatile(&self.spi.dr() as *const _ as *const u8)
                     });
                 } else {
                     nb::Error::WouldBlock
@@ -253,7 +253,7 @@ macro_rules! spi {
             }
 
             fn send(&mut self, byte: u8) -> nb::Result<(), Error> {
-                let sr = self.spi.sr.read();
+                let sr = self.spi.sr().read();
 
                 Err(if sr.ovr().bit_is_set() {
                     nb::Error::Other(Error::Overrun)
@@ -263,7 +263,7 @@ macro_rules! spi {
                     nb::Error::Other(Error::Crc)
                 } else if sr.txe().bit_is_set() {
                     unsafe {
-                        ptr::write_volatile(core::cell::UnsafeCell::raw_get(&self.spi.dr as *const _ as _), byte)
+                        self.spi.dr().write(|w| w.bits(byte as _));
                     }
                     return Ok(());
                 } else {

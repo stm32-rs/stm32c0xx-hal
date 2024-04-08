@@ -91,7 +91,7 @@ impl Rcc {
                     Prescaler::Div128 => (HSI_FREQ / 128, 0b111),
                     _ => (HSI_FREQ, 0b000),
                 };
-                self.cr.write(|w| unsafe { w.hsidiv().bits(div_bits) });
+                self.cr().write(|w| unsafe { w.hsidiv().bits(div_bits) });
                 (freq.Hz(), 0b000)
             }
         };
@@ -116,7 +116,7 @@ impl Rcc {
             _ => (ahb_freq, ahb_freq, 0b000),
         };
 
-        self.cfgr.modify(|_, w| unsafe {
+        self.cfgr().modify(|_, w| unsafe {
             w.hpre()
                 .bits(ahb_psc_bits)
                 .ppre()
@@ -125,7 +125,7 @@ impl Rcc {
                 .bits(sw_bits)
         });
 
-        while self.cfgr.read().sws().bits() != sw_bits {}
+        while self.cfgr().read().sws().bits() != sw_bits {}
 
         Rcc {
             rb: self.rb,
@@ -140,44 +140,44 @@ impl Rcc {
     }
 
     pub(crate) fn enable_hsi(&self) {
-        self.cr.modify(|_, w| w.hsion().set_bit());
-        while self.cr.read().hsirdy().bit_is_clear() {}
+        self.cr().modify(|_, w| w.hsion().set_bit());
+        while self.cr().read().hsirdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_hse(&self, bypass: bool) {
-        self.cr
+        self.cr()
             .modify(|_, w| w.hseon().set_bit().hsebyp().bit(bypass));
-        while self.cr.read().hserdy().bit_is_clear() {}
+        while self.cr().read().hserdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_lsi(&self) {
-        self.csr2.modify(|_, w| w.lsion().set_bit());
-        while self.csr2.read().lsirdy().bit_is_clear() {}
+        self.csr2().modify(|_, w| w.lsion().set_bit());
+        while self.csr2().read().lsirdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_lse(&self, bypass: bool) {
-        self.csr1
+        self.csr1()
             .modify(|_, w| w.lseon().set_bit().lsebyp().bit(bypass));
-        while self.csr1.read().lserdy().bit_is_clear() {}
+        while self.csr1().read().lserdy().bit_is_clear() {}
     }
 
     pub(crate) fn enable_pwr_clock(&self) {
-        self.apbenr1.modify(|_, w| w.pwren().set_bit());
+        self.apbenr1().modify(|_, w| w.pwren().set_bit());
     }
 
     pub(crate) fn enable_rtc(&self, src: RTCSrc) {
         self.enable_pwr_clock();
-        self.apbenr1
+        self.apbenr1()
             .modify(|_, w| w.rtcapben().set_bit().pwren().set_bit());
-        self.apbsmenr1.modify(|_, w| w.rtcapbsmen().set_bit());
-        self.csr1.modify(|_, w| w.rtcrst().set_bit());
+        self.apbsmenr1().modify(|_, w| w.rtcapbsmen().set_bit());
+        self.csr1().modify(|_, w| w.rtcrst().set_bit());
         let rtc_sel = match src {
             RTCSrc::LSE | RTCSrc::LSE_BYPASS => 0b01,
             RTCSrc::LSI => 0b10,
             RTCSrc::HSE | RTCSrc::HSE_BYPASS => 0b11,
         };
 
-        self.csr1.modify(|_, w| unsafe {
+        self.csr1().modify(|_, w| unsafe {
             w.rtcsel()
                 .bits(rtc_sel)
                 .rtcen()
@@ -297,17 +297,17 @@ macro_rules! bus_struct {
             impl $busX {
                 #[inline(always)]
                 fn enr(rcc: &RccRB) -> &rcc::$EN {
-                    &rcc.$en
+                    &rcc.$en()
                 }
 
                 #[inline(always)]
                 fn smenr(rcc: &RccRB) -> &rcc::$SMEN {
-                    &rcc.$smen
+                    &rcc.$smen()
                 }
 
                 #[inline(always)]
                 fn rstr(rcc: &RccRB) -> &rcc::$RST {
-                    &rcc.$rst
+                    &rcc.$rst()
                 }
             }
         )+

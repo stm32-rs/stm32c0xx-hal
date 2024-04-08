@@ -87,38 +87,38 @@ macro_rules! pwm {
                     let arr = ratio / (psc + 1) - 1;
 
                     unsafe {
-                        self.tim.psc.write(|w| w.psc().bits(psc as u16));
-                        self.tim.arr.write(|w| w.$arr().bits(arr as u16));
+                        self.tim.psc().write(|w| w.psc().bits(psc as u16));
+                        self.tim.arr().write(|w| w.$arr().bits(arr as u16));
                         $(
-                            self.tim.arr.modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
+                            self.tim.arr().modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
                         )*
-                        self.tim.cr1.write(|w| w.cen().set_bit())
+                        self.tim.cr1().write(|w| w.cen().set_bit())
                     }
                 }
                 /// Starts listening
                 pub fn listen(&mut self) {
-                    self.tim.dier.write(|w| w.uie().set_bit());
+                    self.tim.dier().write(|w| w.uie().set_bit());
                 }
 
                 /// Stops listening
                 pub fn unlisten(&mut self) {
-                    self.tim.dier.write(|w| w.uie().clear_bit());
+                    self.tim.dier().write(|w| w.uie().clear_bit());
                 }
                 /// Clears interrupt flag
                 pub fn clear_irq(&mut self) {
-                    self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                    self.tim.sr().modify(|_, w| w.uif().clear_bit());
                 }
 
                 /// Resets counter value
                 pub fn reset(&mut self) {
-                    self.tim.cnt.reset();
+                    self.tim.cnt().reset();
                 }
 
                 /// Returns the currently configured frequency
                 pub fn freq(&self) -> Hertz {
                     Hertz::from_raw(self.clk.raw()
-                        / (self.tim.psc.read().bits() as u32 + 1)
-                        / (self.tim.arr.read().bits() as u32 + 1))
+                        / (self.tim.psc().read().bits() as u32 + 1)
+                        / (self.tim.arr().read().bits() as u32 + 1))
                 }
             }
         )+
@@ -148,7 +148,7 @@ macro_rules! pwm_hal {
 
                 fn disable(&mut self) {
                     unsafe {
-                        (*$TIMX::ptr()).ccer.modify(|_, w| w.$ccxe().clear_bit());
+                        (*$TIMX::ptr()).ccer().modify(|_, w| w.$ccxe().clear_bit());
                     }
                 }
 
@@ -156,20 +156,20 @@ macro_rules! pwm_hal {
                     unsafe {
                         let tim = &*$TIMX::ptr();
                         tim.$ccmrx_output().modify(|_, w| w.$ocxpe().set_bit().$ocxm().bits(6));
-                        tim.ccer.modify(|_, w| w.$ccxe().set_bit());
+                        tim.ccer().modify(|_, w| w.$ccxe().set_bit());
                     }
                 }
 
                 fn get_duty(&self) -> u32 {
-                    unsafe { (*$TIMX::ptr()).$ccrx.read().bits() }
+                    unsafe { (*$TIMX::ptr()).$ccrx().read().bits() }
                 }
 
                 fn get_max_duty(&self) -> u32 {
-                    unsafe { (*$TIMX::ptr()).arr.read().bits() }
+                    unsafe { (*$TIMX::ptr()).arr().read().bits() }
                 }
 
                 fn set_duty(&mut self, duty: u32) {
-                    unsafe { (*$TIMX::ptr()).$ccrx.write(|w| w.bits(duty)) }
+                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.bits(duty)) }
                 }
             }
         )+
@@ -193,7 +193,7 @@ macro_rules! pwm_advanced_hal {
 
                 fn disable(&mut self) {
                     unsafe {
-                        (*$TIMX::ptr()).ccer.modify(|_, w| w.$ccxe().clear_bit());
+                        (*$TIMX::ptr()).ccer().modify(|_, w| w.$ccxe().clear_bit());
                     }
                 }
 
@@ -201,26 +201,26 @@ macro_rules! pwm_advanced_hal {
                     unsafe {
                         let tim = &*$TIMX::ptr();
                         tim.$ccmrx_output().modify(|_, w| w.$ocxpe().set_bit().$ocxm().bits(6));
-                        tim.ccer.modify(|_, w| w.$ccxe().set_bit());
+                        tim.ccer().modify(|_, w| w.$ccxe().set_bit());
                         $(
-                            tim.ccer.modify(|_, w| w.$ccxne().bit(true));
+                            tim.ccer().modify(|_, w| w.$ccxne().bit(true));
                         )*
                         $(
-                            tim.bdtr.modify(|_, w| w.$moe().set_bit());
+                            tim.bdtr().modify(|_, w| w.$moe().set_bit());
                         )*
                     }
                 }
 
                 fn get_duty(&self) -> u16 {
-                    unsafe { (*$TIMX::ptr()).$ccrx.read().$ccrx().bits() }
+                    unsafe { (*$TIMX::ptr()).$ccrx().read().$ccrx().bits() }
                 }
 
                 fn get_max_duty(&self) -> u16 {
-                    unsafe { (*$TIMX::ptr()).arr.read().arr().bits() }
+                    unsafe { (*$TIMX::ptr()).arr().read().arr().bits() }
                 }
 
                 fn set_duty(&mut self, duty: u16) {
-                    unsafe { (*$TIMX::ptr()).$ccrx.write(|w| w.$ccrx().bits(duty)) }
+                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.$ccrx().bits(duty)) }
                 }
             }
 

@@ -269,19 +269,19 @@ macro_rules! uart_shared {
 
                 Err(
                     if isr.pe().bit_is_set() {
-                        usart.icr.write(|w| w.pecf().set_bit());
+                        usart.icr().write(|w| w.pecf().set_bit());
                         nb::Error::Other(Error::Parity)
                     } else if isr.fe().bit_is_set() {
-                        usart.icr.write(|w| w.fecf().set_bit());
+                        usart.icr().write(|w| w.fecf().set_bit());
                         nb::Error::Other(Error::Framing)
                     } else if isr.ne().bit_is_set() {
-                        usart.icr.write(|w| w.necf().set_bit());
+                        usart.icr().write(|w| w.necf().set_bit());
                         nb::Error::Other(Error::Noise)
                     } else if isr.ore().bit_is_set() {
-                        usart.icr.write(|w| w.orecf().set_bit());
+                        usart.icr().write(|w| w.orecf().set_bit());
                         nb::Error::Other(Error::Overrun)
                     } else if isr.rxfne().bit_is_set() {
-                        return Ok(usart.rdr.read().bits() as u8)
+                        return Ok(usart.rdr().read().bits() as u8)
                     } else {
                         nb::Error::WouldBlock
                     }
@@ -332,7 +332,7 @@ macro_rules! uart_shared {
             fn write(&mut self, byte: u8) -> nb::Result<(), Self::Error> {
                 let usart = unsafe { &(*$USARTX::ptr()) };
                 if usart.isr_disabled().read().txe().bit_is_set() {
-                    usart.tdr.write(|w| unsafe { w.bits(byte as u32) });
+                    usart.tdr().write(|w| unsafe { w.bits(byte as u32) });
                     Ok(())
                 } else {
                     Err(nb::Error::WouldBlock)
@@ -393,13 +393,13 @@ macro_rules! uart {
                 let bdr = config.baudrate.0 as u64;
                 let clk_mul = 1;
                 let div = (clk_mul * clk) / bdr;
-                usart.brr.write(|w| unsafe { w.bits(div as u32) });
+                usart.brr().write(|w| unsafe { w.bits(div as u32) });
 
                 // usart.cr1.reset();
-                usart.cr2.reset();
-                usart.cr3.reset();
+                usart.cr2().reset();
+                usart.cr3().reset();
 
-                usart.cr2.write(|w| unsafe {
+                usart.cr2().write(|w| unsafe {
                     w.stop()
                         .bits(config.stopbits.bits())
                         .swap()
@@ -408,11 +408,11 @@ macro_rules! uart {
 
                 if let Some(timeout) = config.receiver_timeout {
                     usart.cr1_enabled().write(|w| w.rtoie().set_bit());
-                    usart.cr2.modify(|_, w| w.rtoen().set_bit());
-                    usart.rtor.write(|w| unsafe { w.rto().bits(timeout) });
+                    usart.cr2().modify(|_, w| w.rtoen().set_bit());
+                    usart.rtor().write(|w| unsafe { w.rto().bits(timeout) });
                 }
 
-                usart.cr3.write(|w| unsafe {
+                usart.cr3().write(|w| unsafe {
                     w.txftcfg()
                         .bits(config.tx_fifo_threshold.bits())
                         .rxftcfg()
@@ -442,7 +442,7 @@ macro_rules! uart {
                         .bit(config.fifo_enable)
                 });
 
-                usart.cr3.write(|w| w.dem().bit(PINS::DRIVER_ENABLE));
+                usart.cr3().write(|w| w.dem().bit(PINS::DRIVER_ENABLE));
 
                 // Enable pins
                 pins.setup();
@@ -503,7 +503,7 @@ macro_rules! uart {
                 // mask the allowed bits
                 let mask: u32 = 0x123BFF;
                 self.usart
-                    .icr
+                    .icr()
                     .write(|w| unsafe { w.bits(event.val() & mask) });
             }
         }
@@ -527,7 +527,7 @@ macro_rules! uart {
             /// Clear pending receiver timeout interrupt
             pub fn clear_timeout(&mut self) {
                 let usart = unsafe { &(*$USARTX::ptr()) };
-                usart.icr.write(|w| w.rtocf().set_bit());
+                usart.icr().write(|w| w.rtocf().set_bit());
             }
 
             /// Returns true if the rx fifo threshold has been reached.

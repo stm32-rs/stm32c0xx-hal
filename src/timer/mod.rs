@@ -113,37 +113,37 @@ macro_rules! timers {
                 }
 
                 pub fn enabled(&self) -> bool {
-                    self.tim.cr1.read().cen().bit()
+                    self.tim.cr1().read().cen().bit()
                 }
 
                 /// Pauses timer
                 pub fn pause(&mut self) {
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().clear_bit());
                 }
 
                 /// Resumes timer
                 pub fn resume(&mut self) {
-                    self.tim.cr1.modify(|_, w| w.cen().set_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().set_bit());
                 }
 
                 /// Starts listening
                 pub fn listen(&mut self) {
-                    self.tim.dier.write(|w| w.uie().set_bit());
+                    self.tim.dier().write(|w| w.uie().set_bit());
                 }
 
                 /// Stops listening
                 pub fn unlisten(&mut self) {
-                    self.tim.dier.write(|w| w.uie().clear_bit());
+                    self.tim.dier().write(|w| w.uie().clear_bit());
                 }
 
                 /// Clears interrupt flag
                 pub fn clear_irq(&mut self) {
-                    self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                    self.tim.sr().modify(|_, w| w.uif().clear_bit());
                 }
 
                 /// Resets counter value
                 pub fn reset(&mut self) {
-                    self.tim.cnt.reset();
+                    self.tim.cnt().reset();
                 }
 
                 /// Gets timer counter current value
@@ -152,39 +152,39 @@ macro_rules! timers {
                     $(
                         let _high = self.tim.cnt.read().$cnt_h().bits() as u32;
                     )*
-                    let low = self.tim.cnt.read().$cnt().bits() as u32;
+                    let low = self.tim.cnt().read().$cnt().bits() as u32;
                     low | (_high << 16)
                 }
 
                 pub fn start(&mut self, timeout: MicroSecond) {
                     // Pause the counter. Also set URS so that when we set UG below, it will
                     // generate an update event *without* triggering an interrupt.
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit().urs().set_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().clear_bit().urs().set_bit());
                     // reset counter
-                    self.tim.cnt.reset();
+                    self.tim.cnt().reset();
                     // clear interrupt flag
-                    self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                    self.tim.sr().modify(|_, w| w.uif().clear_bit());
 
                     // Calculate counter configuration
                     let cycles = crate::time::cycles(timeout, self.clk);
                     let psc = cycles / 0xffff;
                     let arr = cycles / (psc + 1);
 
-                    self.tim.psc.write(|w| unsafe { w.psc().bits(psc as u16) });
-                    self.tim.arr.write(|w| unsafe { w.bits(arr as _) });
+                    self.tim.psc().write(|w| unsafe { w.psc().bits(psc as u16) });
+                    self.tim.arr().write(|w| unsafe { w.bits(arr as _) });
 
                     // Generate an update event so that PSC and ARR values are copied into their
                     // shadow registers.
-                    self.tim.egr.write(|w| w.ug().set_bit());
+                    self.tim.egr().write(|w| w.ug().set_bit());
 
-                    self.tim.cr1.modify(|_, w| w.cen().set_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().set_bit());
                 }
 
                 pub fn wait(&mut self) -> nb::Result<(), Void> {
-                    if self.tim.sr.read().uif().bit_is_clear() {
+                    if self.tim.sr().read().uif().bit_is_clear() {
                         Err(nb::Error::WouldBlock)
                     } else {
-                        self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                        self.tim.sr().modify(|_, w| w.uif().clear_bit());
                         Ok(())
                     }
                 }
@@ -238,15 +238,15 @@ macro_rules! timers_external_clocks {
                     self.clk = freq;
                     match clk.mode() {
                         ExternalClockMode::Mode1 => {
-                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b111) });
+                            self.tim.smcr().modify(|_, w| unsafe { w.$sms().bits(0b111) });
                             $(
-                                self.tim.smcr.modify(|_, w| w.$ece().clear_bit());
+                                self.tim.smcr().modify(|_, w| w.$ece().clear_bit());
                             )*
                         },
                         ExternalClockMode::Mode2 => {
-                            self.tim.smcr.modify(|_, w| unsafe { w.$sms().bits(0b0) });
+                            self.tim.smcr().modify(|_, w| unsafe { w.$sms().bits(0b0) });
                             $(
-                                self.tim.smcr.modify(|_, w| w.$ece().set_bit());
+                                self.tim.smcr().modify(|_, w| w.$ece().set_bit());
                             )*
                         },
                     }

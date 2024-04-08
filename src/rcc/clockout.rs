@@ -11,12 +11,12 @@ pub struct Lsco {
 impl Lsco {
     pub fn enable(&mut self) {
         let rcc = unsafe { &(*RCC::ptr()) };
-        rcc.csr1.modify(|_, w| w.lscoen().set_bit());
+        rcc.csr1().modify(|_, w| w.lscoen().set_bit());
     }
 
     pub fn disable(&mut self) {
         let rcc = unsafe { &(*RCC::ptr()) };
-        rcc.csr1.modify(|_, w| w.lscoen().clear_bit());
+        rcc.csr1().modify(|_, w| w.lscoen().clear_bit());
     }
 
     pub fn release(self) -> LscoPin {
@@ -41,7 +41,7 @@ impl LSCOExt for LscoPin {
             }
         };
         self.set_alt_mode(AltFunction::AF0);
-        rcc.csr1.modify(|_, w| w.lscosel().bit(src_select_bit));
+        rcc.csr1().modify(|_, w| w.lscosel().bit(src_select_bit));
         Lsco { pin: self }
     }
 }
@@ -57,13 +57,13 @@ where
 {
     pub fn enable(&mut self) {
         let rcc = unsafe { &(*RCC::ptr()) };
-        rcc.cfgr
+        rcc.cfgr()
             .modify(|_, w| unsafe { w.mcosel().bits(self.src_bits) });
     }
 
     pub fn disable(&mut self) {
         let rcc = unsafe { &(*RCC::ptr()) };
-        rcc.cfgr.modify(|_, w| unsafe { w.mcosel().bits(0) });
+        rcc.cfgr().modify(|_, w| unsafe { w.mcosel().bits(0) });
     }
 
     pub fn release(self) -> PIN {
@@ -92,7 +92,7 @@ macro_rules! mco {
                         _ => 0b111,
                     };
 
-                    rcc.cfgr.modify(|_, w| unsafe {
+                    rcc.cfgr().modify(|_, w| unsafe {
                         w.mcopre().bits(psc_bits)
                     });
 

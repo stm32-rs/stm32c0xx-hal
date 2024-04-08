@@ -50,10 +50,10 @@ macro_rules! qei {
                     tim.ccmr1_output().write(|w| unsafe { w.cc1s().bits(0b01).cc2s().bits(0b01) });
 
                     // Encoder mode 2.
-                    tim.smcr.write(|w| unsafe { w.sms1().bits(0b010) });
+                    tim.smcr().write(|w| unsafe { w.sms1().bits(0b010) });
 
                     // Enable and configure to capture on rising edge
-                    tim.ccer.write(|w| {
+                    tim.ccer().write(|w| {
                         w.cc1e()
                             .set_bit()
                             .cc2e()
@@ -70,7 +70,7 @@ macro_rules! qei {
 
                     pins.setup();
 
-                    tim.cr1.write(|w| w.cen().set_bit());
+                    tim.cr1().write(|w| w.cen().set_bit());
                     Qei { tim, pins }
                 }
 
@@ -83,11 +83,11 @@ macro_rules! qei {
                 type Count = u16;
 
                 fn count(&self) -> u16 {
-                    self.tim.cnt.read().$cnt().bits()
+                    self.tim.cnt().read().$cnt().bits()
                 }
 
                 fn direction(&self) -> Direction {
-                    if self.tim.cr1.read().dir().bit_is_clear() {
+                    if self.tim.cr1().read().dir().bit_is_clear() {
                         hal::Direction::Upcounting
                     } else {
                         hal::Direction::Downcounting
