@@ -19,6 +19,7 @@
 use crate::rcc::{Enable, Rcc, Reset};
 use crate::stm32::CRC;
 use core::hash::Hasher;
+use core::{cell, ptr};
 
 /// Extension trait to constrain the CRC peripheral.
 pub trait CrcExt {
@@ -169,8 +170,9 @@ impl Crc {
     pub fn feed(&mut self, data: &[u8]) {
         let crc = unsafe { &(*CRC::ptr()) };
         for byte in data {
-            let ptr = &crc.dr as *const _;
-            unsafe { core::ptr::write_volatile(ptr as *mut u8, *byte) };
+            unsafe {
+                ptr::write_volatile(cell::UnsafeCell::raw_get(&crc.dr as *const _ as _), byte)
+            }
         }
     }
 
