@@ -55,11 +55,11 @@ impl Power {
 
     pub fn clear_wakeup_flag<L: Into<WakeUp>>(&mut self, lane: L) {
         match lane.into() {
-            WakeUp::Line1 => self.rb.scr().write(|w| w.cwuf1().set_bit()),
-            WakeUp::Line2 => self.rb.scr().write(|w| w.cwuf2().set_bit()),
-            WakeUp::Line3 => self.rb.scr().write(|w| w.cwuf3().set_bit()),
-            WakeUp::Line4 => self.rb.scr().write(|w| w.cwuf4().set_bit()),
-            WakeUp::Line6 => self.rb.scr().write(|w| w.cwuf6().set_bit()),
+            WakeUp::Line1 => _ = self.rb.scr().write(|w| w.cwuf1().set_bit()),
+            WakeUp::Line2 => _ = self.rb.scr().write(|w| w.cwuf2().set_bit()),
+            WakeUp::Line3 => _ = self.rb.scr().write(|w| w.cwuf3().set_bit()),
+            WakeUp::Line4 => _ = self.rb.scr().write(|w| w.cwuf4().set_bit()),
+            WakeUp::Line6 => _ = self.rb.scr().write(|w| w.cwuf6().set_bit()),
             _ => {}
         }
     }
@@ -93,7 +93,7 @@ impl Power {
                 self.rb.cr3().modify(|_, w| w.ewup6().set_bit());
                 self.rb.cr4().modify(|_, w| w.wp6().bit(edge));
             }
-            WakeUp::InternalLine => self.rb.cr3().modify(|_, w| w.eiwul().set_bit()),
+            WakeUp::InternalLine => _ = self.rb.cr3().modify(|_, w| w.eiwul().set_bit()),
         }
     }
 
@@ -105,7 +105,7 @@ impl Power {
             WakeUp::Line4 => self.rb.cr3().modify(|_, w| w.ewup4().clear_bit()),
             WakeUp::Line6 => self.rb.cr3().modify(|_, w| w.ewup6().clear_bit()),
             WakeUp::InternalLine => self.rb.cr3().modify(|_, w| w.eiwul().clear_bit()),
-        }
+        };
     }
 
     pub fn set_mode(&mut self, _mode: PowerMode) {

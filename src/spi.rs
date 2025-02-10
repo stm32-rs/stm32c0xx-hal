@@ -1,6 +1,6 @@
 use crate::gpio::*;
 use crate::rcc::*;
-use crate::stm32::SPI;
+use crate::stm32::SPI1;
 use crate::time::Hertz;
 use core::ptr;
 pub use hal::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
@@ -279,7 +279,7 @@ macro_rules! spi {
 }
 
 spi!(
-    SPI,
+    SPI1,
     spi1,
     sck: [
         (PA1<DefaultMode>, AltFunction::AF0),

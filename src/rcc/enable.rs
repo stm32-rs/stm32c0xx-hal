@@ -115,10 +115,10 @@ bus! {
     DMA => (AHB, dma1en, dma1smen, dma1rst), // 0
 
     DBG => (APB1, dbgen, dbgsmen, dbgrst), // 27
-    I2C => (APB1, i2c1en, i2c1smen, i2c1rst), // 21
+    I2C1 => (APB1, i2c1en, i2c1smen, i2c1rst), // 21
     PWR => (APB1, pwren, pwrsmen, pwrrst), // 28
 
-    SPI => (APB2, spi1en, spi1smen, spi1rst), // 14
+    SPI1 => (APB2, spi1en, spi1smen, spi1rst), // 14
     TIM3 => (APB1, tim3en, tim3smen, tim3rst), // 1
     USART2 => (APB1, usart2en, usart2smen, usart2rst), // 17
     WWDG => (APB1, wwdgen, wwdgsmen,), // 11

@@ -122,17 +122,17 @@ macro_rules! opm_hal {
 }
 
 opm_hal! {
-    TIM1: (Channel1, cc1e, ccmr1_output, oc1m1, oc1fe, ccr1),
-    TIM1: (Channel2, cc2e, ccmr1_output, oc2m1, oc2fe, ccr2),
-    TIM1: (Channel3, cc3e, ccmr2_output, oc3m1, oc3fe, ccr3),
-    TIM1: (Channel4, cc4e, ccmr2_output, oc4m1, oc4fe, ccr4),
-    TIM3: (Channel1, cc1e, ccmr1_output, oc1m1, oc1fe, ccr1),
-    TIM3: (Channel2, cc2e, ccmr1_output, oc2m1, oc2fe, ccr2),
-    TIM3: (Channel3, cc3e, ccmr2_output, oc3m1, oc3fe, ccr3),
-    TIM3: (Channel4, cc4e, ccmr2_output, oc4m1, oc4fe, ccr4),
-    TIM14: (Channel1, cc1e, ccmr1_output, oc1m1, oc1fe, ccr1),
-    TIM16: (Channel1, cc1e, ccmr1_output, oc1m1, oc1fe, ccr1),
-    TIM17: (Channel1, cc1e, ccmr1_output, oc1m1, oc1fe, ccr1),
+    TIM1: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1),
+    TIM1: (Channel2, cc2e, ccmr1_output, oc2m, oc2fe, ccr2),
+    TIM1: (Channel3, cc3e, ccmr2_output, oc3m, oc3fe, ccr3),
+    TIM1: (Channel4, cc4e, ccmr2_output, oc4m, oc4fe, ccr4),
+    TIM3: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1),
+    TIM3: (Channel2, cc2e, ccmr1_output, oc2m, oc2fe, ccr2),
+    TIM3: (Channel3, cc3e, ccmr2_output, oc3m, oc3fe, ccr3),
+    TIM3: (Channel4, cc4e, ccmr2_output, oc4m, oc4fe, ccr4),
+    TIM14: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1),
+    TIM16: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1),
+    TIM17: (Channel1, cc1e, ccmr1_output, oc1m, oc1fe, ccr1),
 }
 
 opm! {

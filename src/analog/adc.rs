@@ -118,7 +118,7 @@ impl Adc {
         // Enable ADC clocks
         ADC::enable(rcc);
 
-        adc.cr().modify(|_, w| w.advregen().set_bit());
+        adc.cr().modify(|_, w| w.advregen().bit(true));
 
         Self {
             rb: adc,
@@ -132,10 +132,12 @@ impl Adc {
     /// Sets ADC source
     pub fn set_clock_source(&mut self, clock_source: ClockSource) {
         match clock_source {
-            ClockSource::Pclk(div) => self
-                .rb
-                .cfgr2()
-                .modify(|_, w| unsafe { w.ckmode().bits(div as u8) }),
+            ClockSource::Pclk(div) => {
+                _ = self
+                    .rb
+                    .cfgr2()
+                    .modify(|_, w| unsafe { w.ckmode().bits(div as u8) })
+            }
             ClockSource::Async(div) => {
                 self.rb.cfgr2().modify(|_, w| unsafe { w.ckmode().bits(0) });
                 self.rb
@@ -152,7 +154,7 @@ impl Adc {
     ///
     /// Do not call if an ADC reading is ongoing.
     pub fn calibrate(&mut self) {
-        self.rb.cr().modify(|_, w| w.adcal().set_bit());
+        self.rb.cr().modify(|_, w| w.adcal().bit(true));
         while self.rb.cr().read().adcal().bit_is_set() {}
     }
 
@@ -214,10 +216,10 @@ impl Adc {
     }
 
     pub fn start_injected(&mut self) {
-        self.rb.cr().modify(|_, w| w.adstart().set_bit());
+        self.rb.cr().modify(|_, w| w.adstart().bit(true));
         // ADSTART bit is cleared to 0 bevor using this function
         // enable self.rb.isr.eos() flag is set after each converstion
-        self.rb.ier().modify(|_, w| w.eocie().set_bit()); // end of sequence interupt enable
+        self.rb.ier().modify(|_, w| w.eocie().bit(true)); // end of sequence interupt enable
     }
 
     pub fn stop_injected(&mut self) {
@@ -263,14 +265,14 @@ impl Adc {
     }
 
     fn power_up(&mut self) {
-        self.rb.isr().modify(|_, w| w.adrdy().set_bit());
+        self.rb.isr().modify(|_, w| w.adrdy().bit(true));
         self.rb.cr().modify(|_, w| w.aden().set_bit());
         while self.rb.isr().read().adrdy().bit_is_clear() {}
     }
 
     fn power_down(&mut self) {
         self.rb.cr().modify(|_, w| w.addis().set_bit());
-        self.rb.isr().modify(|_, w| w.adrdy().set_bit());
+        self.rb.isr().modify(|_, w| w.adrdy().bit(true));
         while self.rb.cr().read().aden().bit_is_set() {}
     }
 }
@@ -374,7 +376,7 @@ where
             .chselr0()
             .modify(|_, w| unsafe { w.bits(1 << PIN::channel()) });
 
-        self.rb.isr().modify(|_, w| w.eos().set_bit());
+        self.rb.isr().modify(|_, w| w.eos().bit(true));
         self.rb.cr().modify(|_, w| w.adstart().set_bit());
         while self.rb.isr().read().eos().bit_is_clear() {}
 
