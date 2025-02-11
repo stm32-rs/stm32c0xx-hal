@@ -48,6 +48,7 @@ device-selected = []
 rt = ["stm32c0/rt"]
 stm32c011 = ["stm32c0/stm32c011", "device-selected"]
 stm32c031 = ["stm32c0/stm32c031", "device-selected"]
+stm32c071 = ["stm32c0/stm32c071", "device-selected"]
 
 i2c-blocking = []
 i2c-nonblocking = []

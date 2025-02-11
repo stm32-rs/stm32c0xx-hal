@@ -83,7 +83,7 @@ macro_rules! qei {
                 type Count = u16;
 
                 fn count(&self) -> u16 {
-                    self.tim.cnt().read().$cnt().bits()
+                    self.tim.cnt().read().$cnt().bits() as u16
                 }
 
                 fn direction(&self) -> Direction {
