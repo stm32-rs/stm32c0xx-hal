@@ -137,3 +137,8 @@ bus! {
     GPIOD => (IOP, gpioden, gpiodsmen, gpiodrst), // 3
     GPIOF => (IOP, gpiofen, gpiofsmen, gpiofrst), // 5
 }
+
+#[cfg(feature = "stm32c071")]
+bus! {
+    I2C2 => (APB1, i2c2en, i2c2smen, i2c2rst), // 21
+}
