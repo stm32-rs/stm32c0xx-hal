@@ -6,6 +6,9 @@ use crate::rcc::*;
 use crate::stm32::I2C1;
 use hal::blocking::i2c::{Read, Write, WriteRead};
 
+#[cfg(feature = "stm32c071")]
+use crate::stm32::I2C2;
+
 pub trait I2cSlave {
     /// Enable/Disable Slave Byte Control. Default SBC is switched on.
     /// For master write/read the transaction should start with sbc disabled.
@@ -519,5 +522,27 @@ i2c!(
         (PB6<Output<OpenDrain>>, AltFunction::AF6),
         (PB8<Output<OpenDrain>>, AltFunction::AF6),
         (PB7<Output<OpenDrain>>, AltFunction::AF14),
+    ],
+);
+
+#[cfg(feature = "stm32c071")]
+i2c!(
+    I2C2,
+    i2c2,
+    sda: [
+        (PA6<Output<OpenDrain>>, AltFunction::AF6),
+        (PA12<Output<OpenDrain>>, AltFunction::AF6),
+        (PA10<Output<OpenDrain>>, AltFunction::AF8),
+        (PB4<Output<OpenDrain>>, AltFunction::AF6),
+        (PB11<Output<OpenDrain>>, AltFunction::AF6),
+        (PB14<Output<OpenDrain>>, AltFunction::AF6),
+    ],
+    scl: [
+        (PA7<Output<OpenDrain>>, AltFunction::AF6),
+        (PA11<Output<OpenDrain>>, AltFunction::AF6),
+        (PA9<Output<OpenDrain>>, AltFunction::AF8),
+        (PB3<Output<OpenDrain>>, AltFunction::AF5),
+        (PB10<Output<OpenDrain>>, AltFunction::AF6),
+        (PB13<Output<OpenDrain>>, AltFunction::AF6),
     ],
 );

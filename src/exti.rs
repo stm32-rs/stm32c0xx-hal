@@ -23,6 +23,8 @@ pub enum Event {
     GPIO15 = 15,
     RTC = 19,
     I2C1 = 23,
+    #[cfg(feature = "stm32c071")]
+    I2C2 = 24,
     USART1 = 25,
     LSE_CSS = 31,
 }

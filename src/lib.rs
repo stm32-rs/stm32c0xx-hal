@@ -23,6 +23,9 @@ pub use stm32c0::stm32c011 as stm32;
 #[cfg(feature = "stm32c031")]
 pub use stm32c0::stm32c031 as stm32;
 
+#[cfg(feature = "stm32c071")]
+pub use stm32c0::stm32c071 as stm32;
+
 #[cfg(feature = "rt")]
 pub use crate::stm32::interrupt;
 

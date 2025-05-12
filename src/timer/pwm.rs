@@ -88,7 +88,7 @@ macro_rules! pwm {
 
                     unsafe {
                         self.tim.psc().write(|w| w.psc().bits(psc as u16));
-                        self.tim.arr().write(|w| w.$arr().bits(arr as u16));
+                        self.tim.arr().write(|w| w.$arr().bits((arr as u16).into()));
                         $(
                             self.tim.arr().modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
                         )*

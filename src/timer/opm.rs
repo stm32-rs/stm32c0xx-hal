@@ -67,7 +67,7 @@ macro_rules! opm {
                     unsafe {
                         let tim = &*$TIMX::ptr();
                         tim.psc().write(|w| w.psc().bits(psc as u16));
-                        tim.arr().write(|w| w.$arr().bits(reload as u16));
+                        tim.arr().write(|w| w.$arr().bits((reload as u16).into()));
                         $(
                             tim.arr.modify(|_, w| w.$arr_h().bits((reload >> 16) as u16));
                         )*
