@@ -92,7 +92,7 @@ macro_rules! pwm {
                         $(
                             self.tim.arr().modify(|_, w| w.$arr_h().bits((arr >> 16) as u16));
                         )*
-                        self.tim.cr1().write(|w| w.cen().set_bit())
+                        self.tim.cr1().write(|w| w.cen().set_bit());
                     }
                 }
                 /// Starts listening
@@ -169,7 +169,7 @@ macro_rules! pwm_hal {
                 }
 
                 fn set_duty(&mut self, duty: u32) {
-                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.bits(duty)) }
+                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.bits(duty)) };
                 }
             }
         )+
@@ -183,7 +183,7 @@ macro_rules! pwm_advanced_hal {
         $ccmrx_output:ident,
         $ocxpe:ident,
         $ocxm:ident,
-        $ccrx:ident
+        $ccrx:expr
         $(, $moe:ident)*
     ) ,)+
     ) => {
@@ -212,7 +212,7 @@ macro_rules! pwm_advanced_hal {
                 }
 
                 fn get_duty(&self) -> u16 {
-                    unsafe { (*$TIMX::ptr()).$ccrx().read().$ccrx().bits() }
+                    unsafe { (*$TIMX::ptr()).ccr($ccrx).read().ccr().bits() }
                 }
 
                 fn get_max_duty(&self) -> u16 {
@@ -220,7 +220,7 @@ macro_rules! pwm_advanced_hal {
                 }
 
                 fn set_duty(&mut self, duty: u16) {
-                    unsafe { (*$TIMX::ptr()).$ccrx().write(|w| w.$ccrx().bits(duty)) }
+                    unsafe { (*$TIMX::ptr()).ccr($ccrx).write(|w| w.ccr().bits(duty)) };
                 }
             }
 
@@ -237,20 +237,20 @@ macro_rules! pwm_advanced_hal {
 }
 
 pwm_advanced_hal! {
-    TIM1:  (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m1, ccr1, moe),
-    TIM1:  (Channel2, cc2e: cc2ne, ccmr1_output, oc2pe, oc2m1, ccr2, moe),
-    TIM1:  (Channel3, cc3e: cc3ne, ccmr2_output, oc3pe, oc3m1, ccr3, moe),
-    TIM1:  (Channel4, cc4e, ccmr2_output, oc4pe, oc4m1, ccr4, moe),
-    TIM14: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m1, ccr1),
-    TIM16: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m1, ccr1, moe),
-    TIM17: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m1, ccr1, moe),
+    TIM1:  (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, 1, moe),
+    TIM1:  (Channel2, cc2e: cc2ne, ccmr1_output, oc2pe, oc2m, 2, moe),
+    TIM1:  (Channel3, cc3e: cc3ne, ccmr2_output, oc3pe, oc3m, 3, moe),
+    TIM1:  (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, 4, moe),
+    TIM14: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, 1),
+    TIM16: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, 1, moe),
+    TIM17: (Channel1, cc1e: cc1ne, ccmr1_output, oc1pe, oc1m, 1, moe),
 }
 
 pwm_hal! {
-    TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m1, ccr1, ccr1_l, ccr1_h),
-    TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m1, ccr2, ccr2_l, ccr2_h),
-    TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m1, ccr3, ccr3_l, ccr3_h),
-    TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m1, ccr4, ccr4_l, ccr4_h),
+    TIM3: (Channel1, cc1e, ccmr1_output, oc1pe, oc1m, ccr1, ccr1_l, ccr1_h),
+    TIM3: (Channel2, cc2e, ccmr1_output, oc2pe, oc2m, ccr2, ccr2_l, ccr2_h),
+    TIM3: (Channel3, cc3e, ccmr2_output, oc3pe, oc3m, ccr3, ccr3_l, ccr3_h),
+    TIM3: (Channel4, cc4e, ccmr2_output, oc4pe, oc4m, ccr4, ccr4_l, ccr4_h),
 }
 
 pwm! {
