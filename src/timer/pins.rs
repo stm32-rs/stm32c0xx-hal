@@ -64,7 +64,7 @@ macro_rules! trigger_pins {
                         }
                     };
 
-                    tim.smcr().modify(|_, w| unsafe { w.ts1().bits(ts) });
+                    tim.smcr().modify(|_, w| unsafe { w.ts().bits(ts) });
 
                     Self {
                         pin,
