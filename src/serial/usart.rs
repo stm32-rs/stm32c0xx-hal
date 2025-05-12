@@ -189,7 +189,7 @@ where
             .iter()
             .map(|c| block!(self.write(*c)))
             .next_back();
-        Ok(())ß
+        Ok(())
     }
 }
 
