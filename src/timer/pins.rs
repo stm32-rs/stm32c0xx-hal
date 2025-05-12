@@ -105,16 +105,23 @@ trigger_pins!(TIM3, [
 ]);
 
 timer_pins!(TIM1, [
+    (Channel1, PA0<DefaultMode>, AltFunction::AF5),
+    (Channel1, PA5<DefaultMode>, AltFunction::AF5),
     (Channel1, PA8<DefaultMode>, AltFunction::AF2),
     (Channel1, PC8<DefaultMode>, AltFunction::AF2),
+    (Channel2, PA1<DefaultMode>, AltFunction::AF5),
     (Channel2, PA9<DefaultMode>, AltFunction::AF2),
     (Channel2, PB3<DefaultMode>, AltFunction::AF1),
+    (Channel2, PB6<DefaultMode>, AltFunction::AF11),
     (Channel2, PC9<DefaultMode>, AltFunction::AF2),
+    (Channel3, PA2<DefaultMode>, AltFunction::AF5),
     (Channel3, PA10<DefaultMode>, AltFunction::AF2),
-    (Channel3, PB6<DefaultMode>, AltFunction::AF1),
+    //(Channel3, PB6<DefaultMode>, AltFunction::AF1),
     (Channel3, PC10<DefaultMode>, AltFunction::AF2),
+    (Channel4, PA3<DefaultMode>, AltFunction::AF5),
     (Channel4, PA11<DefaultMode>, AltFunction::AF2),
     (Channel4, PC11<DefaultMode>, AltFunction::AF2),
+    (Channel4, PF2<DefaultMode>, AltFunction::AF1),
 ]);
 
 // Inverted pins
@@ -134,13 +141,19 @@ timer_pins!(TIM3, [
     (Channel1, PA6<DefaultMode>, AltFunction::AF1),
     (Channel1, PB4<DefaultMode>, AltFunction::AF1),
     (Channel1, PC6<DefaultMode>, AltFunction::AF1),
+    (Channel1, PB7<DefaultMode>, AltFunction::AF11),
     (Channel2, PA7<DefaultMode>, AltFunction::AF1),
     (Channel2, PB5<DefaultMode>, AltFunction::AF1),
+    //(Channel2, PB6<DefaultMode>, AltFunction::AF13),
     (Channel2, PC7<DefaultMode>, AltFunction::AF1),
-    (Channel3, PB0<DefaultMode>, AltFunction::AF1),
-    (Channel3, PC8<DefaultMode>, AltFunction::AF1),
+    (Channel2, PC14<DefaultMode>, AltFunction::AF11),
     (Channel3, PA8<DefaultMode>, AltFunction::AF11),
+    (Channel3, PB0<DefaultMode>, AltFunction::AF1),
+    (Channel3, PB6<DefaultMode>, AltFunction::AF3),
+    (Channel3, PC8<DefaultMode>, AltFunction::AF1),
+    (Channel3, PC15<DefaultMode>, AltFunction::AF3),
     (Channel4, PB1<DefaultMode>, AltFunction::AF1),
+    //(Channel4, PB7<DefaultMode>, AltFunction::AF3),
     (Channel4, PC9<DefaultMode>, AltFunction::AF1),
 ]);
 
