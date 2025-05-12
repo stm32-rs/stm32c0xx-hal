@@ -24,7 +24,7 @@ fn main() -> ! {
     let sda = gpiob.pb9.into_open_drain_output_in_state(PinState::High);
     let scl = gpiob.pb8.into_open_drain_output_in_state(PinState::High);
 
-    let mut i2c = dp.I2C.i2c(sda, scl, Config::new(400.kHz()), &mut rcc);
+    let mut i2c = dp.I2C1.i2c(sda, scl, Config::new(400.kHz()), &mut rcc);
 
     i2c.write(0x2a, &[0x80, 0xff]).unwrap();
     i2c.write(0x2a, &[0x01, 0x04, 0x00, 0x00]).unwrap();

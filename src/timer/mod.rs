@@ -257,8 +257,8 @@ macro_rules! timers_external_clocks {
 }
 
 timers_external_clocks! {
-    TIM1: (tim1, sms1, ece),
-    TIM3: (tim3, sms1, ece),
+    TIM1: (tim1, sms, ece),
+    TIM3: (tim3, sms, ece),
 }
 
 timers! {
