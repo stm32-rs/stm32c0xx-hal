@@ -1,22 +1,19 @@
 //! Power control
 
+use cortex_m::asm::wfe;
 use crate::{
     gpio::*,
     rcc::{Enable, Rcc},
     stm32::PWR,
 };
 
-pub enum LowPowerMode {
-    StopMode1 = 0b000,
-    StopMode2 = 0b001,
-    Standby = 0b011,
-    Shutdown = 0b111,
-}
-
+#[derive(PartialEq)]
 pub enum PowerMode {
     Run,
-    LowPower(LowPowerMode),
-    UltraLowPower(LowPowerMode),
+    Sleep,
+    Stop,
+    Standby,
+    Shutdown,
 }
 
 pub enum WakeUp {
@@ -69,9 +66,12 @@ impl Power {
     }
 
     pub fn enable_wakeup_lane<L: Into<WakeUp>>(&mut self, lane: L, edge: SignalEdge) {
-        assert!(edge != SignalEdge::All);
+        let edge = match edge {
+            SignalEdge::Rising => false,
+            SignalEdge::Falling => true,
+            SignalEdge::All => return,
+        };
 
-        let edge = edge == SignalEdge::Falling;
         match lane.into() {
             WakeUp::Line1 => {
                 self.rb.cr3().modify(|_, w| w.ewup1().set_bit());
@@ -108,32 +108,23 @@ impl Power {
         };
     }
 
-    pub fn set_mode(&mut self, _mode: PowerMode) {
-        todo!();
-        // match mode {
-        //     PowerMode::Run => {
-        //         self.rb.cr1().modify(|_, w| w.lpr().clear_bit());
-        //         while !self.rb.sr2().read().reglpf().bit_is_clear() {}
-        //     }
-        //     PowerMode::LowPower(sm) => {
-        //         self.rb.cr3().modify(|_, w| w.ulpen().clear_bit());
-        //         self.rb
-        //             .cr1
-        //             .modify(|_, w| unsafe { w.lpr().set_bit().lpms().bits(sm as u8) });
-        //         while !self.rb.sr2().read().reglps().bit_is_set()
-        //             || !self.rb.sr2().read().reglpf().bit_is_set()
-        //         {}
-        //     }
-        //     PowerMode::UltraLowPower(sm) => {
-        //         self.rb.cr3().modify(|_, w| w.ulpen().set_bit());
-        //         self.rb
-        //             .cr1
-        //             .modify(|_, w| unsafe { w.lpr().set_bit().lpms().bits(sm as u8) });
-        //         while !self.rb.sr2().read().reglps().bit_is_set()
-        //             || !self.rb.sr2().read().reglpf().bit_is_set()
-        //         {}
-        //     }
-        // }
+    pub fn set_mode(&mut self, mode: PowerMode) {
+        let lpms_value = match mode {
+            PowerMode::Stop => 0b000,
+            PowerMode::Standby => 0b011,
+            PowerMode::Shutdown => 0b100,
+            _ => return,
+        };
+        self.rb.cr1().modify(|_, w| unsafe {w.lpms().bits(lpms_value)});
+        wfe(); // Stimulus. Can be wfi() too
+    }
+
+    pub fn flash_memory_state_low_power(&mut self, mode: PowerMode, powerdown: bool) {
+        if mode == PowerMode::Sleep {
+            self.rb.cr1().modify(|_, w| w.fpd_slp().bit(powerdown));
+        } else if mode == PowerMode::Stop {
+            self.rb.cr1().modify(|_, w| w.fpd_stop().bit(powerdown));
+        }
     }
 }
 
