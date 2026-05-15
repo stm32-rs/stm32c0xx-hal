@@ -1,11 +1,11 @@
 //! Power control
 
-use cortex_m::asm::wfe;
 use crate::{
     gpio::*,
     rcc::{Enable, Rcc},
     stm32::PWR,
 };
+use cortex_m::asm::wfe;
 #[derive(PartialEq)]
 pub enum PowerMode {
     Run,
@@ -122,7 +122,9 @@ impl Power {
             PowerMode::Shutdown => 0b100,
             _ => return,
         };
-        self.rb.cr1().modify(|_, w| unsafe {w.lpms().bits(lpms_value)});
+        self.rb
+            .cr1()
+            .modify(|_, w| unsafe { w.lpms().bits(lpms_value) });
         wfe(); // Stimulus. Can be wfi() too
     }
 
@@ -149,16 +151,16 @@ impl Power {
     pub fn write_backup_registers(&mut self, reg_no: u8, value: u16) {
         match reg_no {
             0 => {
-                self.rb.bkp0r().write(|w| unsafe {w.bkp().bits(value)});
+                self.rb.bkp0r().write(|w| unsafe { w.bkp().bits(value) });
             }
             1 => {
-                self.rb.bkp1r().write(|w| unsafe {w.bkp().bits(value)});
+                self.rb.bkp1r().write(|w| unsafe { w.bkp().bits(value) });
             }
             2 => {
-                self.rb.bkp2r().write(|w| unsafe {w.bkp().bits(value)});
+                self.rb.bkp2r().write(|w| unsafe { w.bkp().bits(value) });
             }
             3 => {
-                self.rb.bkp3r().write(|w| unsafe {w.bkp().bits(value)});
+                self.rb.bkp3r().write(|w| unsafe { w.bkp().bits(value) });
             }
             _ => return,
         }
@@ -182,75 +184,75 @@ impl Power {
         match port {
             GpioPort::A => {
                 if pin < 16 {
-                    self.rb.pdcra().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pdcra()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
             }
             GpioPort::B => {
                 if pin < 16 {
-                    self.rb.pdcrb().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pdcrb()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
             }
             GpioPort::C => {
                 #[cfg(feature = "stm32c011")]
                 if pin == 14 || pin == 15 {
-                    self.rb.pdcrc().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pdcrc()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
 
                 #[cfg(feature = "stm32c031")]
                 if (6..=7).contains(&pin) || (13..=15).contains(&pin) {
-                    self.rb.pdcrc().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pdcrc()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
 
                 #[cfg(not(any(feature = "stm32c011", feature = "stm32c031")))]
                 if pin < 16 {
-                    self.rb.pdcrc().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pdcrc()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
             }
             GpioPort::D => {
                 #[cfg(feature = "stm32c031")]
                 if (0..=3).contains(&pin) {
-                    self.rb.pdcrd().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pdcrd()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
 
                 #[cfg(feature = "stm32c071")]
                 if (0..=3).contains(&pin) || (8..=9).contains(&pin) {
-                    self.rb.pdcrd().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pdcrd()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
             }
             GpioPort::F => {
                 #[cfg(feature = "stm32c011")]
                 if pin == 2 {
-                    self.rb.pdcrf().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pdcrf()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
 
                 #[cfg(feature = "stm32c031")]
                 if (0..=2).contains(&pin) {
-                    self.rb.pdcrf().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pdcrf()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
 
                 #[cfg(feature = "stm32c071")]
                 if (0..=3).contains(&pin) {
-                    self.rb.pdcrf().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pdcrf()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
             }
         }
@@ -260,89 +262,89 @@ impl Power {
         match port {
             GpioPort::A => {
                 if pin < 16 {
-                    self.rb.pucra().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pucra()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
             }
             GpioPort::B => {
                 #[cfg(feature = "stm32c011")]
                 if pin == 6 || pin == 7 {
-                    self.rb.pucrc().modify(|r, w| { // note: pucrc ici à confirmer
+                    self.rb.pucrc().modify(|r, w| {
+                        // note: pucrc ici à confirmer
                         unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
                     });
                 }
 
                 #[cfg(not(feature = "stm32c011"))]
                 if pin < 16 {
-                    self.rb.pucrb().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pucrb()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
             }
             GpioPort::C => {
                 #[cfg(feature = "stm32c011")]
                 if pin == 14 || pin == 15 {
-                    self.rb.pucrc().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pucrc()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
 
                 #[cfg(feature = "stm32c031")]
                 if (6..=7).contains(&pin) || (13..=15).contains(&pin) {
-                    self.rb.pucrc().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pucrc()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
 
                 #[cfg(not(any(feature = "stm32c011", feature = "stm32c031")))]
                 if pin < 16 {
-                    self.rb.pucrc().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pucrc()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
             }
             GpioPort::D => {
                 #[cfg(feature = "stm32c031")]
                 if (0..=3).contains(&pin) {
-                    self.rb.pucrd().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pucrd()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
 
                 #[cfg(feature = "stm32c071")]
                 if (0..=3).contains(&pin) || (8..=9).contains(&pin) {
-                    self.rb.pucrd().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pucrd()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
             }
             GpioPort::F => {
                 #[cfg(feature = "stm32c011")]
                 if pin == 2 {
-                    self.rb.pucrf().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pucrf()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
 
                 #[cfg(feature = "stm32c031")]
                 if (0..=2).contains(&pin) {
-                    self.rb.pucrf().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pucrf()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
 
                 #[cfg(feature = "stm32c071")]
                 if (0..=3).contains(&pin) {
-                    self.rb.pucrf().modify(|r, w| {
-                        unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) }
-                    });
+                    self.rb
+                        .pucrf()
+                        .modify(|r, w| unsafe { w.bits(Self::modify_pin(r.bits(), pin, state)) });
                 }
             }
         }
     }
 }
-
 
 // macro_rules! wakeup_pins {
 //     ($($PIN:path: $line:expr,)+) => {
