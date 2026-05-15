@@ -88,6 +88,9 @@ macro_rules! gpio_trait {
 
 gpio_trait!(gpioa);
 gpio_trait!(gpiob);
+gpio_trait!(gpioc);
+gpio_trait!(gpiod);
+gpio_trait!(gpiof);
 
 // NOTE(unsafe) The only write acess is to BSRR, which is thread safe
 unsafe impl<MODE> Sync for Pin<MODE> {}
@@ -528,11 +531,11 @@ macro_rules! gpio {
                 }
 
                 impl<MODE> $PXi<Output<MODE>> {
-                    /// Erases the pin number from the type
+                    /// Erases the pin number from the type.
                     ///
                     /// This is useful when you want to collect the pins into an array where you
-                    /// need all the elements to have the same type
-                    pub fn downgrade(self) -> $PXx<Output<MODE>> {
+                    /// need all the elements to have the same type.
+                    pub fn erase_pin(self) -> $PXx<Output<MODE>> {
                         $PXx { i: $i, _mode: self._mode }
                     }
                 }
@@ -583,11 +586,11 @@ macro_rules! gpio {
                 }
 
                 impl<MODE> $PXi<Input<MODE>> {
-                    /// Erases the pin number from the type
+                    /// Erases the pin number from the type.
                     ///
                     /// This is useful when you want to collect the pins into an array where you
-                    /// need all the elements to have the same type
-                    pub fn downgrade(self) -> $PXx<Input<MODE>> {
+                    /// need all the elements to have the same type.
+                    pub fn erase_pin(self) -> $PXx<Input<MODE>> {
                         $PXx { i: $i, _mode: self._mode }
                     }
                 }
@@ -614,33 +617,33 @@ macro_rules! gpio {
                 }
             }
 
-            // impl<MODE> $PXx<Output<MODE>> {
-            //     /// Erases the port number from the type
-            //     ///
-            //     /// This is useful when you want to collect the pins into an array where you
-            //     /// need all the elements to have the same type
-            //     pub fn downgrade(self) -> Pin<Output<MODE>> {
-            //         Pin {
-            //             i: self.get_id(),
-            //             port: $GPIOX::ptr() as *const dyn GpioRegExt,
-            //             _mode: self._mode,
-            //         }
-            //     }
-            // }
+            impl<MODE> $PXx<Output<MODE>> {
+                /// Erases the port number from the type.
+                ///
+                /// This is useful when you want to collect the pins into an array where you
+                /// need all the elements to have the same type.
+                pub fn erase_port(self) -> Pin<Output<MODE>> {
+                    Pin {
+                        i: self.get_id(),
+                        port: $GPIOX::ptr() as *const dyn GpioRegExt,
+                        _mode: self._mode,
+                    }
+                }
+            }
 
-            // impl<MODE> $PXx<Input<MODE>> {
-            //     /// Erases the port number from the type
-            //     ///
-            //     /// This is useful when you want to collect the pins into an array where you
-            //     /// need all the elements to have the same type
-            //     pub fn downgrade(self) -> Pin<Input<MODE>> {
-            //         Pin {
-            //             i: self.get_id(),
-            //             port: $GPIOX::ptr() as *const dyn GpioRegExt,
-            //             _mode: self._mode,
-            //         }
-            //     }
-            // }
+            impl<MODE> $PXx<Input<MODE>> {
+                /// Erases the port number from the type.
+                ///
+                /// This is useful when you want to collect the pins into an array where you
+                /// need all the elements to have the same type.
+                pub fn erase_port(self) -> Pin<Input<MODE>> {
+                    Pin {
+                        i: self.get_id(),
+                        port: $GPIOX::ptr() as *const dyn GpioRegExt,
+                        _mode: self._mode,
+                    }
+                }
+            }
         }
 
         pub use $gpiox::{ $($PXi,)+ };
