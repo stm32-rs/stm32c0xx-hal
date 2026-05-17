@@ -23,3 +23,5 @@ jobs:
           override: true
       - name: Regular build
         run: cargo check --features ${{ matrix.feature }}
+      - name: Build with examples
+        run: cargo check --features ${{ matrix.feature }} --examples
